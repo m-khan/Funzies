@@ -1,0 +1,1 @@
+java -jar khanbot_0-1.jar

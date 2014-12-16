@@ -1,0 +1,278 @@
+package evebot;
+
+import java.awt.AWTException;
+import java.awt.MouseInfo;
+import java.awt.Robot;
+import java.awt.Toolkit;
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
+import java.util.Random;
+
+public class MinerBot {
+
+	static final int SCREEN_BUFFER_X = 1920;
+	static final int SCREEN_BUFFER_Y = 0;
+	static final int BOT_DELAY = 100;
+	static final int MENU_HEIGHT = 15;
+	static final int TARGET_WIDTH = 110;
+	static final double OVERVIEW_HEIGHT = 18.75;
+	static final int NUM_BOOKMARKS = 16;
+	static final int LAG_DELAY = 5;
+	
+	static final int MOUSE1 = InputEvent.BUTTON1_DOWN_MASK;
+	static final int MOUSE2 = InputEvent.BUTTON3_DOWN_MASK;
+	//First target location (491, 110)
+	//Second target Location (603, 111)
+	//Third 				(711, 111)
+	//Fourth				(823, 108)
+	//Fifth					(934, 110)
+	//System options location (61, 111)
+	//Undock Location (1851, 202)
+	//Overview Start (1675,212)
+	//Orbit Position (1603, 118)
+	
+	
+	Robot bot;
+	boolean minersActive = false;
+	Random randomizer;
+	
+	public MinerBot() throws AWTException
+	{
+		bot = new Robot();
+		randomizer = new Random();
+		bot.setAutoDelay(100 + randomizer.nextInt(300));
+		
+	}
+	
+	public void clickSystem()
+	{
+		click(61,111);
+	}
+	
+	public void clickBookmark(int n)
+	{
+		sop("Warping to bookmark " + n);
+		int y = 111 + (n + 6) * MENU_HEIGHT;
+		clickSystem();
+		move(100, y);
+		bot.delay(200);
+		click(250, y);
+	}
+	
+	public void lock(int n)
+	{
+		int y = getOVPos(n);
+		bot.keyPress(KeyEvent.VK_CONTROL);
+		click(1675, y);
+		bot.keyRelease(KeyEvent.VK_CONTROL);
+	}
+	
+	public void unlock(int n)
+	{
+		selectTarget(n);
+		click(1668, 118);
+	}
+	
+	public void selectTarget(int n)
+	{
+		int x = 491 + (n - 1) * 110;
+		click(x, 110);
+	}
+	
+	public void deactivateMod(int target)
+	{
+		int x = 491 + (target - 1) * 110;
+		click(x, 203);
+		
+	}
+	
+	public void pressKey(int key)
+	{
+		bot.keyPress(key);
+		bot.keyRelease(key);
+	}
+	
+	public void orbit()
+	{
+		click(1603, 118);
+	}
+	
+	public void clickDock()
+	{	
+		pressKey(KeyEvent.VK_F2);			
+		pressKey(KeyEvent.VK_F1);
+
+		int y = 111 + 5 * MENU_HEIGHT;
+		clickSystem();
+		bot.delay(200);
+		move(100, y);
+		bot.delay(200);
+		move(250, y);
+		bot.delay(200);
+		click(600, y + 3 * MENU_HEIGHT);
+	}
+	
+	public void clickUndock()
+	{
+		click(1851, 202);
+	}
+	
+	public void moveOre()
+	{
+		click(215, 848, MOUSE2);
+		click(236, 855);
+		clickAndDrag(258, 894, 587, 414);
+	}
+	
+	public void stackAll()
+	{
+		click(428, 110, MOUSE2);
+		click(468, 161);
+	}
+	
+	public void clickAndDrag(int x1, int y1, int x2, int y2)
+	{
+		move(x1,y1);
+		bot.mousePress(InputEvent.BUTTON1_DOWN_MASK);
+		move(x2,y2);
+		bot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK);
+		
+	}
+	
+	public void click(int x, int y)
+	{
+		click(x,y,MOUSE1);
+	}
+	
+	public void click(int x, int y, int button)
+	{
+		
+		move(x,y);
+		bot.setAutoDelay(120);
+		bot.mousePress(button);
+		bot.mouseRelease(button);
+	}
+	
+	public void move(int x, int y)
+	{
+		bot.setAutoDelay(200 + randomizer.nextInt(300));
+		bot.mouseMove(x + SCREEN_BUFFER_X, y + SCREEN_BUFFER_Y);
+	}
+
+	public int getOVPos(int n)
+	{
+		return (int) (212 + (n - 1) * OVERVIEW_HEIGHT);		
+	}
+	
+	public void mineTick() throws InterruptedException
+	{
+		click(972, 686);
+		
+		for(int i = 7; i >= 1; i--)
+		{
+			deactivateMod(i); //turn off all mods without knowing their state.  
+			unlock(i);
+		}
+		
+		lock(1);
+		lock(2);
+		lock(3);
+		lock(4);
+		
+		bot.delay(3000);
+
+		selectTarget(1);
+		orbit();
+		pressKey(KeyEvent.VK_F1);
+		
+		selectTarget(2);
+		pressKey(KeyEvent.VK_F2);
+		
+		selectTarget(3);
+		minersActive = true;
+		
+	}
+	
+	public final static void sop(String s)
+	{
+		System.out.println(s);
+	}
+	
+	public static void waitMessage(int n, int r, String s) throws InterruptedException
+	{
+		Random rand = new Random();
+		int add =  + rand.nextInt(r);
+		n = n + LAG_DELAY;
+		
+		Toolkit.getDefaultToolkit().beep();
+		
+		for(int i = 1; i <= n + add; i++)
+		{
+			Thread.sleep(1000);
+	        System.out.print("("+(MouseInfo.getPointerInfo().getLocation().x - 1920)+", "+MouseInfo.getPointerInfo().getLocation().y+"): ");
+			sop(s + "... " + i + "/" + (n+add));
+			if(i > (n + add - 3))
+				Toolkit.getDefaultToolkit().beep();
+				
+		}		
+	}
+	
+	public static void waitMessage(int n, String s) throws InterruptedException
+	{
+		waitMessage(n, 10, s);
+	}
+	
+	public static void main(String[] args) throws Exception
+	{
+		MinerBot mBot = new MinerBot();
+		Random rand = new Random();
+		
+		waitMessage(1, "Initializing...");
+		
+		mBot.moveOre();
+		
+		while(true)
+		{
+		
+			mBot.clickUndock();
+			
+			waitMessage(15, "Undocking");
+			
+			mBot.clickBookmark(rand.nextInt(NUM_BOOKMARKS - 1) + 1);
+			
+			waitMessage(60, "Warping to belt");
+			
+			mBot.mineTick();
+			
+			//For checking mouse Position
+			for (int i = 1; i < 15; i++) {
+				
+				// Should be ~ 30 cycles to fill, but docking sooner reduces impact of mishaps
+				waitMessage(40, 40, "Mining (Cycle " + i + " of 25)");
+				mBot.mineTick();
+	
+//				Thread.sleep(1000);
+		        System.out.println("("+(MouseInfo.getPointerInfo().getLocation().x - 1920)+", "+MouseInfo.getPointerInfo().getLocation().y+")");
+	
+			}
+
+			mBot.bot.setAutoDelay(200);
+			
+			waitMessage(40, 40, "Mining (Last Cycle)");
+
+
+			mBot.minersActive = false;
+			
+			mBot.clickDock();
+
+			waitMessage(70, 20, "Docking with station");
+			
+			mBot.moveOre();
+			
+			waitMessage(1, "Random delay");
+			
+		}
+	}
+
+	
+}

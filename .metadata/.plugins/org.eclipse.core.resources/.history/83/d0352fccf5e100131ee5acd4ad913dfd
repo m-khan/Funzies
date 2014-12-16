@@ -1,0 +1,39 @@
+package khanbot;
+
+public class BotManager {
+
+	public static void main(String[] args) throws Exception {
+		// TODO Auto-generated method stub
+		
+		if(args.length > 0)
+		{
+			joinChannel(args[0]);
+		}
+		else
+		{
+			joinDefaultChannel();
+		}
+	}
+
+	
+	public static void joinDefaultChannel() throws Exception
+	{
+		String channel = "khan___";
+		Bot khanbot = new Bot("khan___");
+		khanbot.twitchConnect("oauth:8xqea4a2u4x4zzcfhrrpgh86q80l7ot", channel);
+		khanbot.sendMessage("#" + channel, "Autoresponces Activated");
+	
+	}
+	
+	public static void joinChannel(String channel) throws Exception
+	{
+		//Bot kublai = new Bot("kublai_");
+		//kublai.twitchConnect("oauth:190rhda671yp5cvdrvy9rqd19nhz6vx", channel);
+		
+		Bot khanbot = new Bot("khan_bot");
+		khanbot.twitchConnect("oauth:o6ubqz9z8pb32j1vks5ezuboylrvwuy", channel);
+		khanbot.sendMessage("#" + channel, "Hi!");
+		
+	}
+
+}
