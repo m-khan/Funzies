@@ -1,0 +1,20 @@
+package khanbot.TPP;
+
+import java.util.HashMap;
+
+public class TPPUserList extends HashMap<String, TPPUser> {
+
+	
+
+	
+	
+	
+	public class TPPUser {
+
+		String userName;
+		int bets;
+		int wins;
+		
+		
+	}
+}

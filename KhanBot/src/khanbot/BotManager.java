@@ -1,5 +1,7 @@
 package khanbot;
 
+import khanbot.TPP.TPPBot;
+
 
 public class BotManager {
 
@@ -15,7 +17,7 @@ public class BotManager {
 		}
 		else
 		{
-			activateSmartBot("khan___");
+			//activateSmartBot("khan___");
 			//joinTPP();
 	/*		
 			activateSmartBot("shifty_time");
@@ -63,14 +65,7 @@ public class BotManager {
 //		kublai.sendMessage(channel, "Smart Bot Active");
 	}
 	
-	public static void joinTPP() throws Exception
-	{
-		TPPBot bot = new TPPBot("Khan___");
-		bot.tppConnect("oauth:8xqea4a2u4x4zzcfhrrpgh86q80l7ot");
-		System.out.println("TPPBot Activated.");
-		
-	}
-	
+
 	public static void joinDefaultChannel() throws Exception
 	{
 		String channel = "khan___";

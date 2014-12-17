@@ -1,0 +1,10 @@
+package khanbot.TPP;
+
+public class TPPUser {
+
+	String userName;
+	int bets;
+	int wins;
+	
+	
+}
