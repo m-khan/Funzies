@@ -2,12 +2,12 @@
 <!DOCTYPE log SYSTEM "logger.dtd">
 <log>
 <record>
-  <date>2014-08-31T03:37:43</date>
-  <millis>1409474263245</millis>
+  <date>2014-12-17T02:56:57</date>
+  <millis>1418806617069</millis>
   <sequence>0</sequence>
   <logger>khanbot.BotManager</logger>
   <level>INFO</level>
-  <class>khanbot.TPPBot</class>
+  <class>khanbot.TPP.TPPBot</class>
   <method>&lt;init&gt;</method>
   <thread>1</thread>
   <message>TPPBOT CREATED</message>

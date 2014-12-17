@@ -108,9 +108,10 @@ public class TPPBot extends PircBot {
 				sop("========= NEW MATCH STARTED =========");
 				newMatch();
 			}
-			else if(message.equalsIgnoreCase("Betting closes in 10 seconds!"))
+			else if(message.equalsIgnoreCase("Betting closes in 10 seconds"))
 			{
 //				Signals the end of the betting period, this is where we bet.
+				sop("========= BETTING PERIOD ENDING =========");
 				Timer timer = new Timer();
 				timer.schedule(new FinishTimer(this), 8000);
 			}
@@ -120,23 +121,27 @@ public class TPPBot extends PircBot {
 				{
 					user.bets++;
 					user.wins++;
+					sop("Win recorded for: " + user);
 				}
 				for(TPPUser user : redTeam)
 				{
 					user.bets++;
+					sop("Loss recorded for: " + user);
 				}
 				
 			}
 			else if("Team Blue won the match!".equalsIgnoreCase(message))
 			{
-				for(TPPUser user : blueTeam)
-				{
-					user.bets++;
-				}
 				for(TPPUser user : redTeam)
 				{
 					user.bets++;
 					user.wins++;
+					sop("Win recorded for: " + user);
+				}
+				for(TPPUser user : blueTeam)
+				{
+					user.bets++;
+					sop("Loss recorded for: " + user);
 				}
 			}
 		}
@@ -258,6 +263,7 @@ public class TPPBot extends PircBot {
 	
 	private void processBet(TPPUser better, int bet, String team)
 	{
+		sop("Recording Bet: " + better + ", " + bet + ", " + team);
 		if(team.equalsIgnoreCase("red"))
 		{
 			redTeam.add(better);
@@ -422,7 +428,4 @@ class FinishTimer extends TimerTask
 		master.startBet();
 	}
 }
-
-
-
 

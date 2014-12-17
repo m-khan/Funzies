@@ -15,4 +15,9 @@ public class TPPUser {
 		balance = -1;
 	}
 	
+	public String toString()
+	{
+		return userName + ": " + wins + "/" + bets;
+	}
+	
 }
