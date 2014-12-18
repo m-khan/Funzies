@@ -1,7 +1,13 @@
 package khanbot.TPP;
 
-public class TPPUser {
+import java.io.Serializable;
 
+public class TPPUser implements Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -4635116000168275540L;
 	String userName;
 	int bets;
 	int wins;

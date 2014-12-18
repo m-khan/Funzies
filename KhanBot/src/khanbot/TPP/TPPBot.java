@@ -8,20 +8,18 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
-import java.util.logging.FileHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import khanbot.BotManager;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.jibble.pircbot.PircBot;
 
 public class TPPBot extends PircBot {
 
-	private final static Logger LOGGER = Logger.getLogger(BotManager.class.getName());
 	static final String TEAM_RED = " red";
 	static final String TEAM_BLUE = " blue";
 	static final int BET_ALLIN = 0;
@@ -38,11 +36,12 @@ public class TPPBot extends PircBot {
 	int balance; //current balance
 	ArrayList<Integer> lbR; //Stores large bets for red
 	ArrayList<Integer> lbB; //Stores large bets for blue
-	HashMap<String, TPPUser> userList;
+	ConcurrentHashMap<String, TPPUser> userList;
 	Set<TPPUser> redTeam;
 	Set<TPPUser> blueTeam;
+	ExecutorService threads;
 	
-	public TPPBot(String name) throws Exception
+	public TPPBot(String name)
 	{
 		this.setName(name);
 		channel = "#twitchplayspokemon";
@@ -58,24 +57,26 @@ public class TPPBot extends PircBot {
 		redTeam = new HashSet<TPPUser>();
 		blueTeam = new HashSet<TPPUser>();
 		
-		LOGGER.addHandler(new FileHandler("TPPLogs.log"));
-		LOGGER.log(Level.INFO, "TPPBOT CREATED");
-
+		threads = Executors.newFixedThreadPool(8);
+		
 		loadUserList();
 		
 	}
 	
-	public void tppConnect(String password) throws Exception
+	public void tppConnect(String password)
 	{
-		this.connect("irc.twitch.tv", 6667, password);		
+		try {
+			this.connect("irc.twitch.tv", 6667, password);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}		
 		this.joinChannel("#twitchplayspokemon");
 	}
 
 	public void onMessage(String chan, String sender,
             String login, String hostname, String message)
 	{
-		String words[] = message.split(" "); 
-		processMessage(sender, message, words);
+		threads.execute(new TPPMessageProcessor(this, sender, message));
 	}
 	
 	private void sop(String p)
@@ -96,11 +97,11 @@ public class TPPBot extends PircBot {
 		sop("balance: " + balance);
 	}
 	
-	private void processMessage(String sender, String message, String[] words)
+	protected void processMessage(String sender, String message, String[] words)
 	{
 		if(sender.equalsIgnoreCase("tppinfobot"))
 		{
-			sop(sender + ": " + message);
+			sop("========= INFO: " + message + " =========");
 			if(message.equalsIgnoreCase("A new match is about to begin!"))
 			{
 //				Signals the beginning of the betting period
@@ -117,6 +118,7 @@ public class TPPBot extends PircBot {
 			}
 			else if("Team Blue won the match!".equalsIgnoreCase(message))
 			{
+				sop("========= RECORDING BLUE VICTORY =========");				
 				for(TPPUser user : blueTeam)
 				{
 					user.bets++;
@@ -130,8 +132,9 @@ public class TPPBot extends PircBot {
 				}
 				
 			}
-			else if("Team Blue won the match!".equalsIgnoreCase(message))
+			else if("Team Red won the match!".equalsIgnoreCase(message))
 			{
+				sop("========= RECORDING RED VICTORY =========");
 				for(TPPUser user : redTeam)
 				{
 					user.bets++;
@@ -147,27 +150,28 @@ public class TPPBot extends PircBot {
 		}
 		else if(sender.equalsIgnoreCase("tppbankbot"))
 		{
-			sop(sender + ": " + message);
-			if(message.startsWith("@" + this.getName()))
+			sop("BANK: " + message);
+			String userName = words[0].substring(1);
+			int userBalance = Integer.parseInt(words[words.length - 1].replace(",",""));
+			
+			if(userName.endsWith("khan___"))
 			{
-				isBP = true;
-				balance = Integer.parseInt(words[words.length - 1]);
-				sop("========= BALANCE DETECTED: " + balance + " =========");
+				sop("========= CURRENT BALANCE: " + userBalance + " =========");
+				balance = userBalance;
+				return;
 			}
-			else if(message.startsWith("@"))
+			
+			if(userList.containsKey(userName))
 			{
-				String userName = words[0].substring(1);
-				int userBalance = Integer.parseInt(words[words.length - 1]);
-				if(userList.containsKey(userName))
-				{
-					userList.get(userName).balance = userBalance;
-				}
-				else
-				{
-					TPPUser newUser = new TPPUser(userName);
-					newUser.balance = userBalance;
-					userList.put(userName, newUser);
-				}
+				userList.get(userName).balance = userBalance;
+				sop("Balance updated for " + userName + ": " + userBalance);
+			}
+			else
+			{
+				sop("Recording new user: " + userName + ": " + userBalance);
+				TPPUser newUser = new TPPUser(userName);
+				newUser.balance = userBalance;
+				userList.put(userName, newUser);
 			}
 		}
 		else if(isBP)
@@ -176,44 +180,71 @@ public class TPPBot extends PircBot {
 			{
 				sop(sender + ": " + message);
 
-				if(userList.containsKey(sender));
+				if(userList.containsKey(sender))
 				{
 					TPPUser better = userList.get(sender);
-					int bet = Integer.parseInt(words[1]);
+					int bet = Integer.parseInt(words[1].replace(",",""));
 					String team = words[2];
 					
 					if(bet <= better.balance && !blueTeam.contains(better) && !redTeam.contains(better))
 					{
 						processBet(better, bet, team);
 					}
-				
+				}
+				else
+				{
+					sop("User '" + sender + "' was not found in User List." );
 				}
 			}
 		}
 	}
 
+	private void printUserList(Map<String, TPPUser> users){
+		for(String key : users.keySet())
+		{
+			sop(users.get(key)+"");
+		}
+	}
+	
 	@SuppressWarnings("unchecked")
 	private void loadUserList()
 	{
+		sop("Loading user list...");
+		
+    	HashMap<String, TPPUser> loadMap = null;
 		try{
 			FileInputStream fileIn = new FileInputStream(fileName);
 			ObjectInputStream in = new ObjectInputStream(fileIn);
-			userList = (HashMap<String, TPPUser>) in.readObject();
+			loadMap = (HashMap<String, TPPUser>) in.readObject();
 			in.close();
 			fileIn.close();
-		}catch(IOException e){
+		}catch(Exception e){
 			e.printStackTrace();
-		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
-		}		
+			loadMap = null;
+		}
+		
+		if(loadMap != null)
+		{
+			printUserList(loadMap);
+			
+			userList = new ConcurrentHashMap<String, TPPUser>(loadMap);
+			sop("Loaded information for " + userList.size() + " users.");
+		}
+		else
+		{
+			sop("WARNING: User list file " + fileName + " not found, creating new list");
+			userList = new ConcurrentHashMap<String, TPPUser>();
+		}
+		
 	}
 	
 	private void saveUserList()
 	{
         try{
+        	HashMap<String, TPPUser> saveMap = new HashMap<String, TPPUser>(userList);
         	FileOutputStream fout = new FileOutputStream(fileName);
         	ObjectOutputStream out = new ObjectOutputStream(fout);
-        	out.writeObject(userList);
+        	out.writeObject(saveMap);
         	out.close();
         	fout.close();
         	System.out.println("User List saved in " + fileName);
@@ -350,6 +381,7 @@ public class TPPBot extends PircBot {
 		{
 //			Both sides have been stacked, probably should stay out
 			sop("========= ODDS UNPREDICTABLE, NO BET MADE =========");
+			this.sendMsg("!bet " + 50 + " red");
 		}
 		else if(outR)
 		{
@@ -367,44 +399,24 @@ public class TPPBot extends PircBot {
 			if(!processOddsBasic(rOdds, bOdds))
 			{
 				sop("========= ODDS TOO CLOSE TO CALL =========");
+				this.sendMsg("!bet " + 50 + " red");
+
 			}
 		}
 	}
 	
 	private void makeBet(String team, int betFlag)
 	{
-		if (balance > 1000)
-		{
-			balance = 1000;
-		}
-		
-		if(betFlag == BET_MIN)
-		{
-			sop("========= MINIMUM BET PLACED:" + team + " =========");
-			if(balance < 200)
-				this.sendMsg("!bet " + balance + team);
-			else
-				this.sendMsg("!bet " + 100 + team);
-				
-		}
-		else if(betFlag == BET_ALLIN || balance < 400)
-		{
-			sop("========= ALLIN BET PLACED:" + team + " =========");
-			this.sendMsg("!bet " + balance + team);
-		}
-		else
-		{
-			sop("========= BET PLACED:" + team + " =========");
-			this.sendMsg("!bet " + balance / 2 + team);
-		}
+		this.sendMsg("!bet " + 100 + team);
 	}
 
-	public static void main(String[] args) throws Exception
+	public static void main(String[] args)
 	{
-		joinTPP();
+			joinTPP();
+
 	}
 	
-	public static void joinTPP() throws Exception
+	public static void joinTPP()
 	{
 		TPPBot bot = new TPPBot("Khan___");
 		bot.tppConnect("oauth:8xqea4a2u4x4zzcfhrrpgh86q80l7ot");
