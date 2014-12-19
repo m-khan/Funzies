@@ -81,8 +81,26 @@ public class TPPBot extends PircBot {
 	
 	private void sop(String p)
 	{
-		System.out.println(p);
+		sop(p, 9);
 		//LOGGER.log(Level.INFO, p);
+	}
+	
+	private void sop(String p, int color)
+	{
+//		System.out.println("Hello \u001b[1;31mred\u001b[0m world!");
+		System.out.println("\u001b[" + (color+30) + "m" + p);
+	}
+	
+	private void sop(String p, int color, boolean bold)
+	{
+		if(bold)
+		{
+			System.out.println("\u001b[1;" + (color+30) + "m" + p);
+		}
+		else
+		{
+			System.out.println("\u001b[" + (color+30) + "m" + p);
+		}
 	}
 	
 	public void infoDump()
@@ -101,24 +119,24 @@ public class TPPBot extends PircBot {
 	{
 		if(sender.equalsIgnoreCase("tppinfobot"))
 		{
-			sop("========= INFO: " + message + " =========");
+			sop("========= INFO: " + message + " =========", 6, true);
 			if(message.equalsIgnoreCase("A new match is about to begin!"))
 			{
 //				Signals the beginning of the betting period
 
-				sop("========= NEW MATCH STARTED =========");
+				sop("========= NEW MATCH STARTED =========", 6, true);
 				newMatch();
 			}
 			else if(message.equalsIgnoreCase("Betting closes in 10 seconds"))
 			{
 //				Signals the end of the betting period, this is where we bet.
-				sop("========= BETTING PERIOD ENDING =========");
+				sop("========= BETTING PERIOD ENDING =========", 6, true);
 				Timer timer = new Timer();
 				timer.schedule(new FinishTimer(this), 8000);
 			}
 			else if("Team Blue won the match!".equalsIgnoreCase(message))
 			{
-				sop("========= RECORDING BLUE VICTORY =========");				
+				sop("========= RECORDING BLUE VICTORY =========", 4, true);				
 				for(TPPUser user : blueTeam)
 				{
 					user.bets++;
@@ -134,7 +152,7 @@ public class TPPBot extends PircBot {
 			}
 			else if("Team Red won the match!".equalsIgnoreCase(message))
 			{
-				sop("========= RECORDING RED VICTORY =========");
+				sop("========= RECORDING RED VICTORY =========", 1, true);
 				for(TPPUser user : redTeam)
 				{
 					user.bets++;
@@ -156,7 +174,7 @@ public class TPPBot extends PircBot {
 			
 			if(userName.endsWith("khan___"))
 			{
-				sop("========= CURRENT BALANCE: " + userBalance + " =========");
+				sop("========= CURRENT BALANCE: " + userBalance + " =========", 3, true);
 				balance = userBalance;
 				return;
 			}
@@ -164,11 +182,11 @@ public class TPPBot extends PircBot {
 			if(userList.containsKey(userName))
 			{
 				userList.get(userName).balance = userBalance;
-				sop("Balance updated for " + userName + ": " + userBalance);
+				sop("Balance updated for " + userName + ": " + userBalance, 3);
 			}
 			else
 			{
-				sop("Recording new user: " + userName + ": " + userBalance);
+				sop("Recording new user: " + userName + ": " + userBalance, 4);
 				TPPUser newUser = new TPPUser(userName);
 				newUser.balance = userBalance;
 				userList.put(userName, newUser);
@@ -183,17 +201,28 @@ public class TPPBot extends PircBot {
 				if(userList.containsKey(sender))
 				{
 					TPPUser better = userList.get(sender);
-					int bet = Integer.parseInt(words[1].replace(",",""));
+					int bet = 0;
+					try{
+					bet = Integer.parseInt(words[1].replace(",",""));
+					}catch(Exception e)
+					{
+						sop("Incorrect bet format", 1);
+						return;
+					}
 					String team = words[2];
 					
 					if(bet <= better.balance && !blueTeam.contains(better) && !redTeam.contains(better))
 					{
 						processBet(better, bet, team);
 					}
+					else
+					{
+						sop("User '" + sender + "' bet " + bet + " when his balance was only " + better.balance, 1);
+					}
 				}
 				else
 				{
-					sop("User '" + sender + "' was not found in User List." );
+					sop("User '" + sender + "' was not found in User List.", 1);
 				}
 			}
 		}
@@ -228,11 +257,11 @@ public class TPPBot extends PircBot {
 			printUserList(loadMap);
 			
 			userList = new ConcurrentHashMap<String, TPPUser>(loadMap);
-			sop("Loaded information for " + userList.size() + " users.");
+			sop("Loaded information for " + userList.size() + " users.", 2, true);
 		}
 		else
 		{
-			sop("WARNING: User list file " + fileName + " not found, creating new list");
+			sop("WARNING: User list file " + fileName + " not found, creating new list", 1, true);
 			userList = new ConcurrentHashMap<String, TPPUser>();
 		}
 		
@@ -247,7 +276,7 @@ public class TPPBot extends PircBot {
         	out.writeObject(saveMap);
         	out.close();
         	fout.close();
-        	System.out.println("User List saved in " + fileName);
+        	sop("User List saved in " + fileName, 2, true);
         }catch(IOException e){
         	e.printStackTrace();
         }
@@ -289,12 +318,12 @@ public class TPPBot extends PircBot {
 	private void sendMsg(String message)
 	{
 		sendMessage(channel, message);
-		sop("MESSAGE SENT: " + message);
+		sop("MESSAGE SENT: " + message, 9, true);
 	}
 	
 	private void processBet(TPPUser better, int bet, String team)
 	{
-		sop("Recording Bet: " + better + ", " + bet + ", " + team);
+		sop("Recording Bet: " + better + ", " + bet + ", " + team, 5);
 		if(team.equalsIgnoreCase("red"))
 		{
 			redTeam.add(better);
