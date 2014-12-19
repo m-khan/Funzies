@@ -215,9 +215,13 @@ public class TPPBot extends PircBot {
 					{
 						processBet(better, bet, team);
 					}
-					else
+					else if(better.balance < bet)
 					{
 						sop("User '" + sender + "' bet " + bet + " when his balance was only " + better.balance, 1);
+					}
+					else
+					{
+						sop("User '" + sender + "' tried to place multiple bets");
 					}
 				}
 				else
