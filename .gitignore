@@ -42,5 +42,6 @@ Network Trash Folder
 Temporary Items
 .apdisk
 
+# Sourcemod Binaries
 *.smx
 scripting/compile.dat
