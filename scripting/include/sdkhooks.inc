@@ -117,17 +117,10 @@ enum SDKHookType
 	SDKHook_Reload,
 	SDKHook_ReloadPost,
 	SDKHook_GetMaxHealth,  /**< ep2v and later */
-	SDKHook_Blocked,
-	SDKHook_BlockedPost,
-	SDKHook_OnTakeDamageAlive,
-	SDKHook_OnTakeDamageAlivePost,
 };
 
 /*
 	Alphabetized for easy readability
-
-	SDKHook_Blocked,
-	SDKHook_BlockedPost,
 	
 	SDKHook_EndTouch,
 	SDKHook_EndTouchPost,
@@ -140,9 +133,6 @@ enum SDKHookType
 	
 	SDKHook_OnTakeDamage,
 	SDKHook_OnTakeDamagePost,
-	
-	SDKHook_OnTakeDamageAlive,
-	SDKHook_OnTakeDamageAlivePost,
 	
 	SDKHook_PreThink,
 	SDKHook_PreThinkPost,
@@ -202,93 +192,90 @@ enum UseType
 	Use_Toggle
 };
 
-union SDKHookCB
+funcenum SDKHookCB
 {
 	// PreThink/Post
 	// PostThink/Post
-	function void (int client);
+	public(client),
 	
 	// Spawn
-	function Action (int entity);
+	Action:public(entity),
 	
 	// GroundEntChanged
 	// SpawnPost
 	// Think/Post
 	// VPhysicsUpdate/Post
-	function void (int entity);
+	public(entity),
 	
 	// EndTouch
 	// StartTouch
 	// Touch
-	// Blocked
-	function Action (int entity, int other);
+	Action:public(entity, other),
 	
 	// EndTouchPost
 	// StartTouchPost
 	// TouchPost
-	function void (int entity, int other);
+	public(entity, other),
 	
 	// SetTransmit
-	function Action (int entity, int client);
+	Action:public(entity, client),
 	
 	// WeaponCanSwitchTo
 	// WeaponCanUse
 	// WeaponDrop
 	// WeaponEquip
 	// WeaponSwitch
-	function Action (int client, int weapon);
+	Action:public(client, weapon),
 	
 	// WeaponCanSwitchToPost
 	// WeaponCanUsePost
 	// WeaponDropPost
 	// WeaponEquipPost
 	// WeaponSwitchPost
-	function void (int client, int weapon);
+	public(client, weapon),
 	
 	// GetMaxHealth (ep2v and later)
-	function Action (int entity, int &maxhealth);
+	Action:public(entity, &maxhealth),
 	
 	// OnTakeDamage
-	// OnTakeDamagAlive
 	// Note: The weapon parameter is not used by all games and damage sources.
 	// Note: Force application is dependent on game and damage type(s)
 	// SDKHooks 1.0+
-	function Action (int victim, int &attacker, int &inflictor, float &damage, int &damagetype);
+	Action:public(victim, &attacker, &inflictor, &Float:damage, &damagetype),
 	// SDKHooks 2.0+
-	function Action (int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon, float damageForce[3], float damagePosition[3]);
+	Action:public(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon, Float:damageForce[3], Float:damagePosition[3]),
 	// SDKHooks 2.1+  (can check for support at runtime using GetFeatureStatus on SDKHook_DmgCustomInOTD capability.
 	// DON'T attempt to access 'damagecustom' var if feature status != available
-	function Action (int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &weapon,
-		float damageForce[3], float damagePosition[3], int damagecustom);
+	Action:public(victim, &attacker, &inflictor, &Float:damage, &damagetype, &weapon,
+		Float:damageForce[3], Float:damagePosition[3], damagecustom),
 	
 	// OnTakeDamagePost
-	// OnTakeDamageAlivePost
-	function void (int victim, int attacker, int inflictor, float damage, int damagetype);
-	function void (int victim, int attacker, int inflictor, float damage, int damagetype, const float damageForce[3], const float damagePosition[3]);
+	public(victim, attacker, inflictor, Float:damage, damagetype),
+	public(victim, attacker, inflictor, Float:damage, damagetype, weapon, const Float:damageForce[3], const Float:damagePosition[3]),
 	
 	// FireBulletsPost
-	function void (int client, int shots, const char[] weaponname);
+	public(client, shots, const String:weaponname[]),
 	
 	// TraceAttack
-	function Action (int victim, int &attacker, int &inflictor, float &damage, int &damagetype, int &ammotype, int hitbox, int hitgroup);
+	Action:public(victim, &attacker, &inflictor, &Float:damage, &damagetype, &ammotype, hitbox, hitgroup),
 	
 	// TraceAttackPost
-	function void (int victim, int attacker, int inflictor, float damage, int damagetype, int ammotype, int hitbox, int hitgroup);
+	public(victim, attacker, inflictor, Float:damage, damagetype, ammotype, hitbox, hitgroup),
 	
 	// ShouldCollide
-	function bool (int entity, int collisiongroup, int contentsmask, bool originalResult);
+	bool:public(entity, collisiongroup, contentsmask, bool:originalResult),
 	
 	// Use
-	function Action (int entity, int activator, int caller, UseType type, float value);
+	Action:public(entity, activator, caller, UseType:type, Float:value),
 	
 	// UsePost
-	function void (int entity, int activator, int caller, UseType type, float value);
+	public(entity, activator, caller, UseType:type, Float:value),
 	
 	// Reload
-	function Action (int weapon);
+	Action:public(weapon),
 	
 	// Reload post
-	function void (int weapon, bool bSuccessful);
+	public(weapon, bool:bSuccessful)
 };
 
 

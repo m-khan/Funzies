@@ -79,7 +79,7 @@ new String:g_voteInfo[3][65];	/* Holds the target's name, authid, and IP */
 new String:g_voteArg[256];	/* Used to hold ban/kick reasons or vote questions */
 
 
-TopMenu hTopMenu;
+new Handle:hTopMenu = INVALID_HANDLE;
 
 #include "basevotes/votekick.sp"
 #include "basevotes/voteban.sp"
@@ -110,8 +110,8 @@ public OnPluginStart()
 	g_Cvar_Limits[2] = CreateConVar("sm_vote_ban", "0.60", "percent required for successful ban vote.", 0, true, 0.05, true, 1.0);		
 	
 	/* Account for late loading */
-	TopMenu topmenu;
-	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
+	new Handle:topmenu;
+	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
 	{
 		OnAdminMenuReady(topmenu);
 	}
@@ -132,7 +132,7 @@ public OnConfigsExecuted()
 	g_mapCount = LoadMapList(g_MapList);
 }
 
-public OnAdminMenuReady(TopMenu topmenu)
+public OnAdminMenuReady(Handle:topmenu)
 {
 	/* Block us from being called twice */
 	if (topmenu == hTopMenu)
@@ -144,13 +144,33 @@ public OnAdminMenuReady(TopMenu topmenu)
 	hTopMenu = topmenu;
 	
 	/* Build the "Voting Commands" category */
-	new TopMenuObject:voting_commands = hTopMenu.FindCategory(ADMINMENU_VOTINGCOMMANDS);
+	new TopMenuObject:voting_commands = FindTopMenuCategory(hTopMenu, ADMINMENU_VOTINGCOMMANDS);
 
 	if (voting_commands != INVALID_TOPMENUOBJECT)
 	{
-		hTopMenu.AddItem("sm_votekick", AdminMenu_VoteKick, voting_commands, "sm_votekick", ADMFLAG_VOTE|ADMFLAG_KICK);
-		hTopMenu.AddItem("sm_voteban", AdminMenu_VoteBan, voting_commands, "sm_voteban", ADMFLAG_VOTE|ADMFLAG_BAN);
-		hTopMenu.AddItem("sm_votemap", AdminMenu_VoteMap, voting_commands, "sm_votemap", ADMFLAG_VOTE|ADMFLAG_CHANGEMAP);
+		AddToTopMenu(hTopMenu,
+			"sm_votekick",
+			TopMenuObject_Item,
+			AdminMenu_VoteKick,
+			voting_commands,
+			"sm_votekick",
+			ADMFLAG_VOTE|ADMFLAG_KICK);
+			
+		AddToTopMenu(hTopMenu,
+			"sm_voteban",
+			TopMenuObject_Item,
+			AdminMenu_VoteBan,
+			voting_commands,
+			"sm_voteban",
+			ADMFLAG_VOTE|ADMFLAG_BAN);
+			
+		AddToTopMenu(hTopMenu,
+			"sm_votemap",
+			TopMenuObject_Item,
+			AdminMenu_VoteMap,
+			voting_commands,
+			"sm_votemap",
+			ADMFLAG_VOTE|ADMFLAG_CHANGEMAP);
 	}
 }
 

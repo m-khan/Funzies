@@ -641,9 +641,9 @@ native SQL_UnlockDatabase(Handle:database);
  *						empty even if an error condition exists, so it is important 
  *						to check the actual Handle value instead.
  * @param data			Data passed in via the original threaded invocation.
- * @noreturn
+ * @param 
  */
-typedef SQLTCallback = function void (Handle owner, Handle hndl, const char[] error, any data);
+functag public SQLTCallback(Handle:owner, Handle:hndl, const String:error[], any:data);
 
 /**
  * Tells whether two database handles both point to the same database 
@@ -701,7 +701,18 @@ native SQL_TQuery(Handle:database, SQLTCallback:callback, const String:query[], 
  *
  * @return              A transaction handle.
  */
-native Transaction:SQL_CreateTransaction();
+native Handle:SQL_CreateTransaction();
+
+/**
+ * Adds a query to a transaction object.
+ *
+ * @param txn           A transaction handle.
+ * @param query         Query string.
+ * @param data			Extra data value to pass to the final callback.
+ * @return              The index of the query in the transaction's query list.
+ * @error               Invalid transaction handle.
+ */
+native SQL_AddQuery(Handle:txn, const String:query[], any:data=0);
 
 /**
  * Callback for a successful transaction.
@@ -713,7 +724,7 @@ native Transaction:SQL_CreateTransaction();
  * @param queryData     An array of each data value passed to SQL_AddQuery().
  * @noreturn
  */
-typedef SQLTxnSuccess = function void (Handle db, any data, int numQueries, Handle[] results, any[] queryData);
+functag public SQLTxnSuccess(Handle:db, any:data, numQueries, Handle:results[], any:queryData[]);
 
 /**
  * Callback for a failed transaction.
@@ -726,24 +737,7 @@ typedef SQLTxnSuccess = function void (Handle db, any data, int numQueries, Hand
  * @param queryData     An array of each data value passed to SQL_AddQuery().
  * @noreturn
  */
-typedef SQLTxnFailure = function void (Handle db, any data, int numQueries, const char[] error, int failIndex, any[] queryData);
-
-/**
- * Adds a query to a transaction object.
- *
- * @param txn           A transaction handle.
- * @param query         Query string.
- * @param data			Extra data value to pass to the final callback.
- * @return              The index of the query in the transaction's query list.
- * @error               Invalid transaction handle.
- */
-native SQL_AddQuery(Transaction:txn, const String:query[], any:data=0);
-
-methodmap Transaction < Handle
-{
-		public Transaction() = SQL_CreateTransaction;
-		public AddQuery() = SQL_AddQuery;
-};
+functag public SQLTxnFailure(Handle:db, any:data, numQueries, const String:error[], failIndex, any:queryData[]);
 
 /**
  * Sends a transaction to the database thread. The transaction handle is
@@ -761,8 +755,8 @@ methodmap Transaction < Handle
  */
 native SQL_ExecuteTransaction(
 		Handle:db,
-		Transaction:txn,
-		SQLTxnSuccess:onSuccess = INVALID_FUNCTION,
-		SQLTxnFailure:onError = INVALID_FUNCTION,
+		Handle:txn,
+		SQLTxnSuccess:onSuccess=SQLTxnSuccess:-1,
+		SQLTxnFailure:onError=SQLTxnFailure:-1,
 		any:data=0,
 		DBPriority:priority=DBPrio_Normal);

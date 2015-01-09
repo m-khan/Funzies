@@ -70,7 +70,7 @@ public OnRebuildAdminCache(AdminCachePart:part)
 	}
 }
 
-ParseError(const String:format[], any:...)
+ParseError(const String:format[], {Handle,String,Float,_}:...)
 {
 	decl String:buffer[512];
 	

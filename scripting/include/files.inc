@@ -108,14 +108,9 @@ native BuildPath(PathType:type, String:buffer[], maxlength, const String:fmt[], 
  * @note OpenDirectory() supports the "file://" notation.
  *
  * @param path			Path to open.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to find files existing in any of
- *                      the Valve search paths, rather than solely files
- *                      existing directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
  * @return				A Handle to the directory, INVALID_HANDLE on open error.
  */
-native Handle:OpenDirectory(const String:path[], bool:use_valve_fs=false, const String:valve_path_id[]="GAME");
+native Handle:OpenDirectory(const String:path[]);
 
 /**
  * Reads the current directory entry as a local filename, then moves to the next file.
@@ -141,27 +136,17 @@ native bool:ReadDirEntry(Handle:dir, String:buffer[], maxlength, &FileType:type=
  *
  * @param file			File to open.
  * @param mode			Open mode.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to find files existing in valve
- *						search paths, rather than solely files existing directly
- *						in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
  * @return				A Handle to the file, INVALID_HANDLE on open error.
  */
-native Handle:OpenFile(const String:file[], const String:mode[], bool:use_valve_fs=false, const String:valve_path_id[]="GAME");
+native Handle:OpenFile(const String:file[], const String:mode[]);
 
 /**
  * Deletes a file.
  *
  * @param path			Path of the file to delete.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to delete files existing in the Valve
- *                      search path, rather than solely files existing directly
- *						in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
- * @return				True on success, false on failure or if file not immediately removed.
+ * @return				True on success, false otherwise.
  */
-native bool:DeleteFile(const String:path[], bool:use_valve_fs=false, const String:valve_path_id[]="DEFAULT_WRITE_PATH");
+native bool:DeleteFile(const String:path[]);
 
 /**
  * Reads a line from a text file.
@@ -319,38 +304,28 @@ native FilePosition(Handle:file);
  * @param path			Path to the file.
  * @param use_valve_fs	If true, the Valve file system will be used instead.
  *						This can be used to find files existing in any of
- *						the Valve search paths, rather than solely files 
+ *						the GAME search paths, rather than solely files 
  *						existing directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
  * @return				True if the file exists, false otherwise.
  */
-native bool:FileExists(const String:path[], bool:use_valve_fs=false, const String:valve_path_id[]="GAME");
+native bool:FileExists(const String:path[], bool:use_valve_fs=false);
 
 /**
  * Renames a file.
  *
  * @param newpath		New path to the file.
  * @param oldpath		Path to the existing file.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to rename files in the game's
- *                      Valve search paths, rather than directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
- * @return				True on success or use_valve_fs specified, false otherwise.
+ * @return				True on success, false otherwise.
  */
-native bool:RenameFile(const String:newpath[], const String:oldpath[], bool:use_valve_fs=false, const String:valve_path_id[]="DEFAULT_WRITE_PATH");
+native bool:RenameFile(const String:newpath[], const String:oldpath[]);
 
 /**
  * Checks if a directory exists.
  *
  * @param path			Path to the directory.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to find files existing in any of
- *                      the Valve search paths, rather than solely files
- *                      existing directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
  * @return				True if the directory exists, false otherwise.
  */
-native bool:DirExists(const String:path[], bool:use_valve_fs=false, const String:valve_path_id[]="GAME");
+native bool:DirExists(const String:path[]);
 
 /**
  * Get the file size in bytes.
@@ -358,20 +333,18 @@ native bool:DirExists(const String:path[], bool:use_valve_fs=false, const String
  * @param path			Path to the file.
  * @param use_valve_fs	If true, the Valve file system will be used instead.
  *						This can be used to find files existing in any of
- *						the Valve search paths, rather than solely files 
+ *						the GAME search paths, rather than solely files 
  *						existing directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for all search paths.
  * @return				File size in bytes, -1 if file not found.
  */
-native FileSize(const String:path[], bool:use_valve_fs=false, const String:valve_path_id[]="GAME");
+native FileSize(const String:path[], bool:use_valve_fs=false);
 
 /**
  * Flushes a file's buffered output; any buffered output
  * is immediately written to the file.
  *
  * @param file			Handle to the file.
- * @return				True on success or use_valve_fs specified with OpenFile,
- *                      otherwise false on failure.
+ * @return				True on success, false on failure.
  */
 native FlushFile(Handle:file);
 
@@ -400,22 +373,8 @@ native bool:RemoveDir(const String:path[]);
  * @param path			Path to create.
  * @param mode			Permissions (default is o=rx,g=rx,u=rwx).  Note that folders must have 
  *						the execute bit set on Linux.  On Windows, the mode is ignored.
- * @param use_valve_fs  If true, the Valve file system will be used instead.
- *                      This can be used to create folders in the game's
- *                      Valve search paths, rather than directly in the gamedir.
- * @param valve_path_id	If use_valve_fs, a search path from gameinfo or NULL_STRING for default.
- *                      In this case, mode is ignored.
  */
-native bool:CreateDirectory(const String:path[], mode, bool:use_valve_fs=false, const String:valve_path_id[]="DEFAULT_WRITE_PATH");
-
-/**
- * Changes a file or directories permissions.
- *
- * @param path			Path to the file.
- * @param mode			Permissions to set.
- * @return				True on success, false otherwise.
- */
-native bool:SetFilePermissions(const String:path[], mode);
+native bool:CreateDirectory(const String:path[], mode);
 
 /**
  * Returns a file timestamp as a unix timestamp.

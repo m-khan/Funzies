@@ -140,7 +140,7 @@ stock ReplyToTargetError(client, reason)
  * @param clients       Array to fill with unique, valid client indexes.
  * @return              True if pattern was recognized, false otherwise.
  */
-typedef MultiTargetFilter = function bool (const char[] pattern, Handle clients);
+functag public bool:MultiTargetFilter(const String:pattern[], Handle:clients);
 
 /**
  * Adds a multi-target filter function for ProcessTargetString().

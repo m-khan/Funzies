@@ -46,7 +46,7 @@ public Plugin:myinfo =
 	url = "http://www.sourcemod.net/"
 };
 
-TopMenu hTopMenu;
+new Handle:hTopMenu = INVALID_HANDLE;
 
 new Handle:g_MapList;
 new Handle:g_ProtectedVars;
@@ -75,8 +75,8 @@ public OnPluginStart()
 	RegConsoleCmd("sm_revote", Command_ReVote);
 	
 	/* Account for late loading */
-	TopMenu topmenu;
-	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
+	new Handle:topmenu;
+	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
 	{
 		OnAdminMenuReady(topmenu);
 	}
@@ -146,7 +146,7 @@ bool:IsClientAllowedToChangeCvar(client, const String:cvarname[])
 	return allowed;
 }
 
-public OnAdminMenuReady(TopMenu topmenu)
+public OnAdminMenuReady(Handle:topmenu)
 {
 	/* Block us from being called twice */
 	if (topmenu == hTopMenu)
@@ -158,28 +158,67 @@ public OnAdminMenuReady(TopMenu topmenu)
 	hTopMenu = topmenu;
 	
 	/* Build the "Player Commands" category */
-	TopMenuObject player_commands = hTopMenu.FindCategory(ADMINMENU_PLAYERCOMMANDS);
+	new TopMenuObject:player_commands = FindTopMenuCategory(hTopMenu, ADMINMENU_PLAYERCOMMANDS);
 	
 	if (player_commands != INVALID_TOPMENUOBJECT)
 	{
-		hTopMenu.AddItem("sm_kick", AdminMenu_Kick, player_commands, "sm_kick", ADMFLAG_KICK);
-		hTopMenu.AddItem("sm_who", AdminMenu_Who, player_commands, "sm_who", ADMFLAG_GENERIC);
+		AddToTopMenu(hTopMenu, 
+			"sm_kick",
+			TopMenuObject_Item,
+			AdminMenu_Kick,
+			player_commands,
+			"sm_kick",
+			ADMFLAG_KICK);
+			
+		AddToTopMenu(hTopMenu,
+			"sm_who",
+			TopMenuObject_Item,
+			AdminMenu_Who,
+			player_commands,
+			"sm_who",
+			ADMFLAG_GENERIC);
 	}
 
-	TopMenuObject server_commands = hTopMenu.FindCategory(ADMINMENU_SERVERCOMMANDS);
+	new TopMenuObject:server_commands = FindTopMenuCategory(hTopMenu, ADMINMENU_SERVERCOMMANDS);
 
 	if (server_commands != INVALID_TOPMENUOBJECT)
 	{
-		hTopMenu.AddItem("sm_reloadadmins", AdminMenu_ReloadAdmins, server_commands, "sm_reloadadmins", ADMFLAG_BAN);
-		hTopMenu.AddItem("sm_map", AdminMenu_Map, server_commands, "sm_map", ADMFLAG_CHANGEMAP);
-		hTopMenu.AddItem("sm_execcfg", AdminMenu_ExecCFG, server_commands, "sm_execcfg", ADMFLAG_CONFIG);		
+		AddToTopMenu(hTopMenu,
+			"sm_reloadadmins",
+			TopMenuObject_Item,
+			AdminMenu_ReloadAdmins,
+			server_commands,
+			"sm_reloadadmins",
+			ADMFLAG_BAN);
+			
+		AddToTopMenu(hTopMenu,
+			"sm_map",
+			TopMenuObject_Item,
+			AdminMenu_Map,
+			server_commands,
+			"sm_map",
+			ADMFLAG_CHANGEMAP);
+			
+		AddToTopMenu(hTopMenu,
+			"sm_execcfg",
+			TopMenuObject_Item,
+			AdminMenu_ExecCFG,
+			server_commands,
+			"sm_execcfg",
+			ADMFLAG_CONFIG);		
 	}
 
-	TopMenuObject voting_commands = hTopMenu.FindCategory(ADMINMENU_VOTINGCOMMANDS);
+	new TopMenuObject:voting_commands = FindTopMenuCategory(hTopMenu, ADMINMENU_VOTINGCOMMANDS);
 
 	if (voting_commands != INVALID_TOPMENUOBJECT)
 	{
-		hTopMenu.AddItem("sm_cancelvote", AdminMenu_CancelVote, voting_commands, "sm_cancelvote", ADMFLAG_VOTE);
+		AddToTopMenu(hTopMenu,
+			"sm_cancelvote",
+			TopMenuObject_Item,
+			AdminMenu_CancelVote,
+			voting_commands,
+			"sm_cancelvote",
+			ADMFLAG_VOTE);
 	}
 }
 
@@ -187,7 +226,7 @@ public OnLibraryRemoved(const String:name[])
 {
 	if (strcmp(name, "adminmenu") == 0)
 	{
-		hTopMenu = null;
+		hTopMenu = INVALID_HANDLE;
 	}
 }
 

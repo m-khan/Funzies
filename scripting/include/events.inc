@@ -48,7 +48,7 @@ enum EventHookMode
 /**
  * Hook function types for events.
  */
-union EventHook
+funcenum EventHook
 {
 	/**
 	 * Called when a game event is fired.
@@ -59,7 +59,7 @@ union EventHook
 	 * @param dontBroadcast	True if event was not broadcast to clients, false otherwise.
 	 * @return				Ignored for post hooks. Plugin_Handled will block event if hooked as pre.
 	 */
-	function Action (Handle event, const char[] name, bool dontBroadcast);
+	Action:public(Handle:event, const String:name[], bool:dontBroadcast),
 	/**
 	 * Called when a game event is fired.
 	 *
@@ -69,7 +69,7 @@ union EventHook
 	 * @param dontBroadcast	True if event was not broadcast to clients, false otherwise.
 	 * @noreturn
 	 */
-	function void (Handle event, const char[] name, bool dontBroadcast);
+	public(Handle:event, const String:name[], bool:dontBroadcast),
 };
 
 /**
@@ -145,11 +145,10 @@ native CancelCreatedEvent(Handle:event);
  *
  * @param event			Handle to the event.
  * @param key			Name of event key.
- * @param defValue		Optional default value to use if the key is not found.
  * @return				The boolean value of the specfied event key.
  * @error				Invalid or corrupt Handle.
  */
-native bool:GetEventBool(Handle:event, const String:key[], bool:defValue=false);
+native bool:GetEventBool(Handle:event, const String:key[]);
 
 /**
  * Sets the boolean value of a game event's key.
@@ -167,11 +166,10 @@ native SetEventBool(Handle:event, const String:key[], bool:value);
  *
  * @param event			Handle to the event.
  * @param key			Name of event key.
- * @param defValue		Optional default value to use if the key is not found.
  * @return				The integer value of the specfied event key.
  * @error				Invalid or corrupt Handle.
  */
-native GetEventInt(Handle:event, const String:key[], defValue=0);
+native GetEventInt(Handle:event, const String:key[]);
 
 /**
  * Sets the integer value of a game event's key.
@@ -194,11 +192,10 @@ native SetEventInt(Handle:event, const String:key[], value);
  *
  * @param event			Handle to the event.
  * @param key			Name of event key.
- * @param defValue		Optional default value to use if the key is not found.
  * @return				The floating point value of the specfied event key.
  * @error				Invalid or corrupt Handle.
  */
-native Float:GetEventFloat(Handle:event, const String:key[], Float:defValue=0.0);
+native Float:GetEventFloat(Handle:event, const String:key[]);
 
 /**
  * Sets the floating point value of a game event's key.
@@ -218,11 +215,10 @@ native SetEventFloat(Handle:event, const String:key[], Float:value);
  * @param key			Name of event key.
  * @param value			Buffer to store the value of the specified event key.
  * @param maxlength		Maximum length of string buffer.
- * @param defValue		Optional default value to use if the key is not found.
  * @noreturn
  * @error				Invalid or corrupt Handle.
  */
-native GetEventString(Handle:event, const String:key[], String:value[], maxlength, const String:defvalue[]="");
+native GetEventString(Handle:event, const String:key[], String:value[], maxlength);
 
 /**
  * Sets the string value of a game event's key.

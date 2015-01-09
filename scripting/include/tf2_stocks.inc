@@ -336,19 +336,19 @@ stock TFClassType:TF2_GetPlayerClass(client)
  * Note: If setting player class in a player spawn hook weapons should be set to false.
  *
  * @param client		Player's index.
- * @param classType		TFClassType class symbol.
+ * @param class			TFClassType class symbol.
  * @param weapons		This paramater is ignored.
  * @param persistent	If true changes the players desired class so the change stays after death.
  * @noreturn
  * @error				Invalid client index.
  */
-stock TF2_SetPlayerClass(client, TFClassType:classType, bool:weapons=true, bool:persistent=true)
+stock TF2_SetPlayerClass(client, TFClassType:class, bool:weapons=true, bool:persistent=true)
 {
-	SetEntProp(client, Prop_Send, "m_iClass", _:classType);
+	SetEntProp(client, Prop_Send, "m_iClass", _:class);
 	
 	if (persistent)
 	{
-		SetEntProp(client, Prop_Send, "m_iDesiredPlayerClass", _:classType);
+		SetEntProp(client, Prop_Send, "m_iDesiredPlayerClass", _:class);
 	}
 }
 

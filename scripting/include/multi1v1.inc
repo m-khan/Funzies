@@ -1,6 +1,3 @@
-#if defined __MULTI1V1_INCLUDE__
-  #endinput
-#endif
 #define __MULTI1V1_INCLUDE__
 
 #define WEAPON_NAME_LENGTH 32

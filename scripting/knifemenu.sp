@@ -6,6 +6,8 @@
 	
 	==========Changes==========
 	Version 1.1: changed panels to menu
+	Version 1.2: Equips current weapon after knife is given.
+	Version 1.3: cvars for enable and re-equip
 	
 */
 
@@ -16,6 +18,9 @@
 
 
 new KnifeType[MAXPLAYERS + 1] = {-1, ...};
+new String:weaponName[64];
+new Handle:g_Cvar_Enabled = INVALID_HANDLE;
+new Handle:g_Cvar_Reequip = INVALID_HANDLE;
 
 public Plugin:myinfo =
 {
@@ -31,7 +36,9 @@ public OnPluginStart()
 {
 	
 	CreateConVar("sm_knifemenu_version", PLUGIN_VERSION, "Version of WRATH OF KHAN plugin", FCVAR_PLUGIN|FCVAR_SPONLY|FCVAR_REPLICATED|FCVAR_NOTIFY);
-	
+	g_Cvar_Enabled = CreateConVar("sm_knifemenu_enabled", "1", "1 = Enabled, 0 = Disabled", FCVAR_PLUGIN);
+	g_Cvar_Enabled = CreateConVar("sm_knifemenu_reequip_primary", "0", "Switches weapon back to currently selected after knife is equipped, use in dm servers", FCVAR_PLUGIN);
+
 	HookEvent("player_spawn", Event_PlayerSpawn);
 
 	RegConsoleCmd("nogoldknife", Command_nogoldknife, "Disables gold knife");
@@ -124,17 +131,24 @@ public Event_PlayerSpawn(Handle:event, const String:name[], bool:dontBroadcast){
 			}
 			else if (KnifeType[client] != 0)
 			{
-				EquipKnife(client, false);
+				CreateTimer(0.1, EquipKnifeSpawn, client, TIMER_FLAG_NO_MAPCHANGE);
 			}
 		}
 	}
 }
 
+public Action:EquipKnifeSpawn(Handle:timer, any:client)
+{
+	EquipKnife(client, false);
+	
+}
+
 public EquipKnife(any:client, bool:fromMenu)
 {
 	// DEBUG PrintToChatAll("Equiping %i with %i", client, KnifeType[client]);
-	if(KnifeType[client] >= 0 && IsPlayerAlive(client))
+	if(KnifeType[client] >= 0 && IsPlayerAlive(client) && GetConVarInt(g_Cvar_Enabled))
 	{
+		GetClientWeapon(client, weaponName, sizeof(weaponName));
 		new wepIdx;
 		if ((wepIdx = GetPlayerWeaponSlot(client, 2)) != -1)
 		{
@@ -215,6 +229,11 @@ public EquipKnife(any:client, bool:fromMenu)
 				if(fromMenu == true)
 					PrintToChat(client, "\x01Enjoy your \x03Butterfly Knife\x01!");
 			}
+		}
+		if(fromMenu == false && GetConVarInt(g_Cvar_Reequip) > 0)
+		{
+			//PrintToChat(client, "%s", weaponName);
+			FakeClientCommand(client, "use %s", weaponName);
 		}
 	}
 	else

@@ -283,16 +283,7 @@ native Float:GetDistGainFromSoundLevel(soundlevel, Float:distance);
  * @return		Plugin_Continue to allow the sound to be played, Plugin_Stop to block it, 
  *			  Plugin_Changed when any parameter has been modified.
  */
-typedef AmbientSHook = function Action (
-  char sample[PLATFORM_MAX_PATH],
-  int &entity,
-  float &volume,
-  int &level,
-  int &pitch,
-  float pos[3],
-  int &flags,
-  float &delay
-);
+functag public Action:AmbientSHook(String:sample[PLATFORM_MAX_PATH], &entity, &Float:volume, &level, &pitch, Float:pos[3], &flags, &Float:delay);
 
 /**
  * Called when a sound is going to be emitted to one or more clients.
@@ -310,17 +301,7 @@ typedef AmbientSHook = function Action (
  * @return			Plugin_Continue to allow the sound to be played, Plugin_Stop to block it, 
  *				  Plugin_Changed when any parameter has been modified.
  */
-typedef NormalSHook = function Action (
-  int clients[64],
-  int &numClients,
-  char sample[PLATFORM_MAX_PATH],
-  int &entity,
-  int &channel,
-  float &volume,
-  int &level,
-  int &pitch,
-  int &flags
-);
+functag public Action:NormalSHook(clients[64], &numClients, String:sample[PLATFORM_MAX_PATH], &entity, &channel, &Float:volume, &level, &pitch, &flags);
 
 /**
  * Hooks all played ambient sounds.

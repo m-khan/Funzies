@@ -46,7 +46,7 @@ public Plugin:myinfo =
 	url = "http://www.sourcemod.net/"
 };
 
-TopMenu hTopMenu;
+new Handle:hTopMenu = INVALID_HANDLE;
 
 new g_BanTarget[MAXPLAYERS+1];
 new g_BanTargetUserId[MAXPLAYERS+1];
@@ -77,8 +77,8 @@ public OnPluginStart()
 	RegConsoleCmd("sm_abortban", Command_AbortBan, "sm_abortban");
 	
 	/* Account for late loading */
-	TopMenu topmenu;
-	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != null))
+	new Handle:topmenu;
+	if (LibraryExists("adminmenu") && ((topmenu = GetAdminTopMenu()) != INVALID_HANDLE))
 	{
 		OnAdminMenuReady(topmenu);
 	}
@@ -118,25 +118,22 @@ LoadBanReasons()
 		decl String:sectionName[255];
 		if(!KvGetSectionName(g_hKvBanReasons, sectionName, sizeof(sectionName)))
 		{
-			SetFailState("Error in %s: File corrupt or in the wrong format", g_BanReasonsPath);
-			return;
+			return SetFailState("Error in %s: File corrupt or in the wrong format", g_BanReasonsPath);
 		}
 
 		if(strcmp(sectionName, "banreasons") != 0)
 		{
-			SetFailState("Error in %s: Couldn't find 'banreasons'", g_BanReasonsPath);
-			return;
+			return SetFailState("Error in %s: Couldn't find 'banreasons'", g_BanReasonsPath);
 		}
 		
 		//Reset kvHandle
 		KvRewind(g_hKvBanReasons);
 	} else {
-		SetFailState("Error in %s: File not found, corrupt or in the wrong format", g_BanReasonsPath);
-		return;
+		return SetFailState("Error in %s: File not found, corrupt or in the wrong format", g_BanReasonsPath);
 	}
 }
 
-public OnAdminMenuReady(TopMenu topmenu)
+public OnAdminMenuReady(Handle:topmenu)
 {
 	/* Block us from being called twice */
 	if (topmenu == hTopMenu)
@@ -148,11 +145,18 @@ public OnAdminMenuReady(TopMenu topmenu)
 	hTopMenu = topmenu;
 	
 	/* Find the "Player Commands" category */
-	new TopMenuObject:player_commands = hTopMenu.FindCategory(ADMINMENU_PLAYERCOMMANDS);
+	new TopMenuObject:player_commands = FindTopMenuCategory(hTopMenu, ADMINMENU_PLAYERCOMMANDS);
 
 	if (player_commands != INVALID_TOPMENUOBJECT)
 	{
-		hTopMenu.AddItem("sm_ban", AdminMenu_Ban, player_commands, "sm_ban", ADMFLAG_BAN);
+		AddToTopMenu(hTopMenu,
+			"sm_ban",
+			TopMenuObject_Item,
+			AdminMenu_Ban,
+			player_commands,
+			"sm_ban",
+			ADMFLAG_BAN);
+			
 	}
 }
 
@@ -294,13 +298,7 @@ public Action:Command_AddBan(client, args)
 	}
 
 	/* Verify steamid */
-	new bool:idValid = false;
-	if (!strncmp(authid, "STEAM_", 6) && authid[7] == ':')
-		idValid = true;
-	else if (!strncmp(authid, "[U:", 3))
-		idValid = true;
-	
-	if (!idValid)
+	if (strncmp(authid, "STEAM_", 6) != 0 || authid[7] != ':')
 	{
 		ReplyToCommand(client, "[SM] %t", "Invalid SteamID specified");
 		return Plugin_Handled;
@@ -341,13 +339,13 @@ public Action:Command_Unban(client, args)
 	ReplaceString(arg, sizeof(arg), "\"", "");	
 
 	new ban_flags;
-	if (IsCharNumeric(arg[0]))
+	if (strncmp(arg, "STEAM_", 6) == 0 && arg[7] == ':')
 	{
-		ban_flags |= BANFLAG_IP;
+		ban_flags |= BANFLAG_AUTHID;
 	}
 	else
 	{
-		ban_flags |= BANFLAG_AUTHID;
+		ban_flags |= BANFLAG_IP;
 	}
 
 	LogAction(client, -1, "\"%L\" removed ban (filter \"%s\")", client, arg);

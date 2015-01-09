@@ -1,12 +1,13 @@
 #include <sourcemod>
 #include <smlib>
 #include "include/multi1v1.inc"
+#include "multi1v1/generic.sp"
 
 public Plugin:myinfo = {
     name = "CS:GO Multi1v1: knife round addon",
     author = "splewis",
     description = "Adds a knife-round option when both playes in an arena allow it",
-    version = "1.0",
+    version = PLUGIN_VERSION,
     url = "https://github.com/splewis/csgo-multi-1v1"
 };
 

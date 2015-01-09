@@ -36,9 +36,9 @@
 #define _handles_included
 
 /**
- * Preset Handle values.
+ * Handle helper macros.
  */
-enum Handle: // Tag disables introducing "Handle" as a symbol.
+enum Handle
 {
 	INVALID_HANDLE = 0,
 };
@@ -52,9 +52,10 @@ enum Handle: // Tag disables introducing "Handle" as a symbol.
  *       sure you read the documentation on whatever provided the Handle.
  *
  * @param hndl		Handle to close.
+ * @return			True if successful, false if not closeable.
  * @error			Invalid handles will cause a run time error.
  */
-native CloseHandle(Handle:hndl);
+native bool:CloseHandle(Handle:hndl);
 
 /**
  * Clones a Handle.  When passing handles in between plugins, caching handles
@@ -74,15 +75,6 @@ native CloseHandle(Handle:hndl);
  * @error			Invalid handles will cause a run time error.
  */
 native Handle:CloneHandle(Handle:hndl, Handle:plugin=INVALID_HANDLE);
-
-/**
- * Helper for object-oriented syntax.
- */
-methodmap Handle __nullable__
-{
-	public Clone() = CloneHandle;
-	public ~Handle() = CloseHandle;
-}
 
 /**
  * Do not use this function.  Returns if a Handle and its contents 

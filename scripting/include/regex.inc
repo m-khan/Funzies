@@ -104,7 +104,7 @@ enum RegexError
  * @param errcode		Regex type error code encountered, if applicable.
  * @return				Valid regex handle on success, INVALID_HANDLE on failure.
  */
-native Regex CompileRegex(const char[] pattern, int flags = 0, char[] error="", int maxLen = 0, RegexError &errcode = REGEX_ERROR_NONE);
+native Handle:CompileRegex(const String:pattern[], flags = 0, String:error[]="", maxLen = 0, &RegexError:errcode = REGEX_ERROR_NONE);
 
 /**
  * Matches a string against a pre-compiled regular expression pattern.
@@ -117,7 +117,7 @@ native Regex CompileRegex(const char[] pattern, int flags = 0, char[] error="", 
  * @note				Use the regex handle passed to this function to extract
  *						matches with GetRegexSubString().
  */
-native int MatchRegex(Handle regex, const char[] str, RegexError &ret = REGEX_ERROR_NONE);
+native MatchRegex(Handle:regex, const String:str[], &RegexError:ret = REGEX_ERROR_NONE);
 
 /**
  * Returns a matched substring from a regex handle.
@@ -130,14 +130,7 @@ native int MatchRegex(Handle regex, const char[] str, RegexError &ret = REGEX_ER
  * @param maxlen		The maximum string length of the buffer.
  * @return				True if a substring was found, False on fail/error
  */
-native bool GetRegexSubString(Handle regex, int str_id, char[] buffer, int maxlen);
-
-methodmap Regex < Handle
-{
-	public Regex() = CompileRegex;
-	public Match() = MatchRegex;
-	public GetSubString() = GetRegexSubString;
-};
+native bool:GetRegexSubString(Handle:regex, str_id, String:buffer[], maxlen);
 
 /**
  * Matches a string against a regular expression pattern.
@@ -153,15 +146,19 @@ methodmap Regex < Handle
  * @param maxLen		Maximum length of the error buffer.
  * @return				Number of substrings found or -1 on failure.
  */
-stock int SimpleRegexMatch(const char[] str, const char[] pattern, int flags = 0, char[] error="", int maxLen = 0)
+stock SimpleRegexMatch(const String:str[], const String:pattern[], flags = 0, String:error[]="", maxLen = 0)
 {
-	Regex regex = Regex(pattern, flags, error, maxLen);
-	if (!regex)
-		return -1;	
+	new Handle:regex = CompileRegex(pattern, flags, error, maxLen);
 	
-	int substrings = regex.Match(str);
-	delete regex;
-
+	if (regex == INVALID_HANDLE)
+	{
+		return -1;	
+	}
+	
+	new substrings = MatchRegex(regex, str);
+	
+	CloseHandle(regex);
+	
 	return substrings;	
 }
 

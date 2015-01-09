@@ -150,8 +150,9 @@ enum MenuSource
  * @param action			The action of the menu.
  * @param param1			First action parameter (usually the client).
  * @param param2			Second action parameter (usually the item).
+ * @noreturn
  */
-typedef MenuHandler = function int (Menu menu, MenuAction action, int param1, int param2);
+functag public MenuHandler(Handle:menu, MenuAction:action, param1, param2);
 
 /**
  * Creates a new, empty menu using the default style.
@@ -163,7 +164,7 @@ typedef MenuHandler = function int (Menu menu, MenuAction action, int param1, in
  *							the only default actions.
  * @return					A new menu Handle.
  */
-native Menu:CreateMenu(MenuHandler:handler, MenuAction:actions=MENU_ACTIONS_DEFAULT);
+native Handle:CreateMenu(MenuHandler:handler, MenuAction:actions=MENU_ACTIONS_DEFAULT);
 
 /**
  * Displays a menu to a client.
@@ -452,7 +453,7 @@ native GetMenuOptionFlags(Handle:menu);
  * @noreturn
  * @error					Invalid Handle.
  */
-native void SetMenuOptionFlags(Handle:menu, flags);
+native SetMenuOptionFlags(Handle:menu, flags);
 
 /**
  * Returns whether a vote is in progress.
@@ -527,14 +528,12 @@ stock bool:VoteMenuToAll(Handle:menu, time, flags=0)
  *							defines.
  * @noreturn
  */
-typedef VoteHandler = function void (
-  Menu menu,
-  int num_votes, 
-  int num_clients,
-  const int client_info[][2], 
-  int num_items,
-  const int item_info[][2]
-);
+functag public VoteHandler(Handle:menu,
+						   num_votes, 
+						   num_clients,
+						   const client_info[][2], 
+						   num_items,
+						   const item_info[][2]);	   
 
 /**
  * Sets an advanced vote handling callback.  If this callback is set,
@@ -546,61 +545,6 @@ typedef VoteHandler = function void (
  * @error					Invalid Handle or callback.
  */
 native SetVoteResultCallback(Handle:menu, VoteHandler:callback);
-
-methodmap Menu < Handle {
-	public Menu() = CreateMenu;
-	public Display() = DisplayMenu;
-	public DisplayAt() = DisplayMenuAtItem;
-	public AddItem() = AddMenuItem;
-	public InsertItem() = InsertMenuItem;
-	public RemoveItem() = RemoveMenuItem;
-	public RemoveAllItems() = RemoveAllMenuItems;
-	public GetItem() = GetMenuItem;
-	public GetTitle() = GetMenuTitle;
-	public SetTitle() = SetMenuTitle;
-	public ToPanel() = CreatePanelFromMenu;
-	public Cancel() = CancelMenu;
-	public DisplayVote() = VoteMenu;
-	public DisplayVoteToAll() = VoteMenuToAll;
-
-	property int Pagination {
-		public get() = GetMenuPagination;
-		public set(int value) {
-			SetMenuPagination(this, value);
-		}
-	}
-	property int OptionFlags {
-		public get() = GetMenuOptionFlags;
-		public set() = SetMenuOptionFlags;
-	}
-	property bool ExitButton {
-		public get() = GetMenuExitButton;
-		public set(bool value) {
-			SetMenuExitButton(this, value);
-		}
-	}
-	property bool ExitBackButton {
-		public get() = GetMenuExitBackButton;
-		public set(bool value) {
-			SetMenuExitBackButton(this, value);
-		}
-	}
-
-	public SetNoVoteButton() = SetMenuNoVoteButton;
-	public SetVoteResultCallback() = SetVoteResultCallback;
-
-	property int ItemCount {
-		public get() = GetMenuItemCount;
-	}
-	property Handle Style {
-		public get() = GetMenuStyle;
-	}
-	property int SelectionPosition {
-		public get() {
-			return GetMenuSelectionPosition();
-		}
-	}
-}
 
 /**
  * Returns the number of seconds you should "wait" before displaying
@@ -847,7 +791,7 @@ native RedrawMenuItem(const String:text[]);
  * @return				True on success, false on failure.
  * @error				Invalid client index, or radio menus not supported.
  */
-native bool:InternalShowMenu(client, const String:str[], time, keys=-1, MenuHandler:handler=INVALID_FUNCTION);
+native bool:InternalShowMenu(client, const String:str[], time, keys=-1, MenuHandler:handler=MenuHandler:-1);
 
 /**
  * Retrieves voting information from MenuAction_VoteEnd.

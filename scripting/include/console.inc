@@ -29,7 +29,7 @@
  *
  * Version: $Id$
  */
-
+ 
 #if defined _console_included
  #endinput
 #endif
@@ -328,7 +328,7 @@ native FormatActivitySource(client, target, const String:namebuf[], maxlength);
  * @return				An Action value.  Not handling the command
  *						means that Source will report it as "not found."
  */
-typedef SrvCmd = function Action (int args);
+functag public Action:SrvCmd(args);
 
 /**
  * Creates a server-only console command, or hooks an already existing one.  
@@ -352,7 +352,7 @@ native RegServerCmd(const String:cmd[], SrvCmd:callback, const String:descriptio
  * @return				An Action value.  Not handling the command
  *						means that Source will report it as "not found."
  */
-typedef ConCmd = function Action (int client, int args);
+functag public Action:ConCmd(client, args);
 
 /**
  * Creates a console command, or hooks an already existing one.
@@ -438,7 +438,7 @@ native GetCmdArgString(String:buffer[], maxlength);
  * @return				A handle to the newly created convar. If the convar already exists, a handle to it will still be returned.
  * @error				Convar name is blank or is the same as an existing console command.
  */
-native ConVar:CreateConVar(const String:name[], const String:defaultValue[], const String:description[]="", flags=0, bool:hasMin=false, Float:min=0.0, bool:hasMax=false, Float:max=0.0);
+native Handle:CreateConVar(const String:name[], const String:defaultValue[], const String:description[]="", flags=0, bool:hasMin=false, Float:min=0.0, bool:hasMax=false, Float:max=0.0);
 
 /**
  * Searches for a console variable.
@@ -446,7 +446,7 @@ native ConVar:CreateConVar(const String:name[], const String:defaultValue[], con
  * @param name			Name of convar to find.
  * @return				A handle to the convar if it is found. INVALID_HANDLE otherwise.
  */
-native ConVar:FindConVar(const String:name[]);
+native Handle:FindConVar(const String:name[]);
 
 /**
  * Called when a console variable's value is changed.
@@ -456,7 +456,7 @@ native ConVar:FindConVar(const String:name[]);
  * @param newValue		String containing the new value of the convar.
  * @noreturn
  */
-typedef ConVarChanged = function void (ConVar convar, const char[] oldValue, const char[] newValue);
+functag public ConVarChanged(Handle:convar, const String:oldValue[], const String:newValue[]);
 
 /**
  * Creates a hook for when a console variable's value is changed.
@@ -669,7 +669,7 @@ native SetConVarBounds(Handle:convar, ConVarBounds:type, bool:set, Float:value=0
  */
 native GetConVarName(Handle:convar, String:name[], maxlength);
 
-union ConVarQueryFinished
+funcenum ConVarQueryFinished
 {	
 	/**
 	 * Called when a query to retrieve a client's console variable has finished.
@@ -683,7 +683,7 @@ union ConVarQueryFinished
 	 * @param value			Value that was passed when query was started.
 	 * @noreturn
 	 */
-	function void (QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue, any value);
+	public(QueryCookie:cookie, client, ConVarQueryResult:result, const String:cvarName[], const String:cvarValue[], any:value),
 	
 	/**
 	 * Called when a query to retrieve a client's console variable has finished.
@@ -696,7 +696,7 @@ union ConVarQueryFinished
 	 * @param convarValue	Value of client convar that was queried if successful. This will be "" if it was not.
 	 * @noreturn
 	 */
-	function void (QueryCookie cookie, int client, ConVarQueryResult result, const char[] cvarName, const char[] cvarValue);
+	public(QueryCookie:cookie, client, ConVarQueryResult:result, const String:cvarName[], const String:cvarValue[])
 };
 
 /**
@@ -905,7 +905,7 @@ native RemoveServerTag(const String:tag[]);
  * @param argc          Argument count.
  * @return				Action to take (see extended notes above).
  */
-typedef CommandListener = function Action (int client, const char[] command, int argc);
+functag public Action:CommandListener(client, const String:command[], argc);
 
 #define FEATURECAP_COMMANDLISTENER  "command listener"
 
@@ -968,27 +968,4 @@ forward Action:OnClientSayCommand(client, const String:command[], const String:s
  * @param sArgs			Chat argument string.
  * 
  */
-forward void OnClientSayCommand_Post(int client, const char[] command, const char[] sArgs);
-
-// Most of these aren't properties because they're more complex
-methodmap ConVar < Handle
-{
-	public ConVar() = CreateConVar;
-	public GetBool() = GetConVarBool;
-	public SetBool() = SetConVarBool;
-	public GetInt() = GetConVarInt;
-	public SetInt() = SetConVarInt;
-	public GetFloat() = GetConVarFloat;
-	public SetFloat() = SetConVarFloat;
-	public GetString() = GetConVarString;
-	public SetString() = SetConVarString;
-	public RestoreDefaultValue() = ResetConVar;
-	public GetFlags() = GetConVarFlags;
-	public SetFlags() = SetConVarFlags;
-	public GetBounds() = GetConVarBounds;
-	public SetBounds() = SetConVarBounds;
-	public GetDefaultValue() = GetConVarDefault;
-	public GetName() = GetConVarName;
-	public AddChangeHook() = HookConVarChange;
-	public RemoveChangeHook() = UnhookConVarChange;
-}
+forward OnClientSayCommand_Post(client, const String:command[], const String:sArgs[]);

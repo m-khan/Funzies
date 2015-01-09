@@ -40,11 +40,11 @@
  */
 struct Plugin
 {
-   public const char[] name;		/**< Plugin Name */
-   public const char[] description;	/**< Plugin Description */
-   public const char[] author;		/**< Plugin Author */
-   public const char[] version;		/**< Plugin Version */
-   public const char[] url;			/**< Plugin URL */
+   const String:name[],			/**< Plugin Name */
+   const String:description[],	/**< Plugin Description */
+   const String:author[],		/**< Plugin Author */
+   const String:version[],		/**< Plugin Version */
+   const String:url[],			/**< Plugin URL */
 };
 
 #include <core>
@@ -74,7 +74,6 @@ struct Plugin
 #include <banning>
 #include <commandfilters>
 #include <nextmap>
-#include <commandline>
 
 enum APLRes
 {
@@ -109,7 +108,7 @@ public Plugin:myinfo;
  *
  * @noreturn
  */
-forward void OnPluginStart();
+forward OnPluginStart();
 
 /**
  * @deprecated Use AskPluginLoad2() instead.
@@ -168,12 +167,12 @@ forward OnGameFrame();
  * @note This used to be OnServerLoad(), which is now deprecated.
  * Plugins still using the old forward will work.
  */
-forward void OnMapStart();
+forward OnMapStart();
 
 /**
  * Called right before a map ends.
  */
-forward void OnMapEnd();
+forward OnMapEnd();
 
 /**
  * Called when the map has loaded, servercfgfile (server.cfg) has been 
@@ -185,7 +184,7 @@ forward void OnMapEnd();
  *
  * @noreturn
  */
-forward void OnConfigsExecuted();
+forward OnConfigsExecuted();
 
 /**
  * This is called once, right after OnMapStart() but any time before 
@@ -202,20 +201,20 @@ forward void OnConfigsExecuted();
  *
  * @noreturn
  */
-forward void OnAutoConfigsBuffered();
+forward OnAutoConfigsBuffered();
 
 /**
  * @deprecated Use OnConfigsExecuted() instead.
  */
 #pragma deprecated Use OnConfigsExecuted() instead
-forward void OnServerCfg();
+forward OnServerCfg();
 
 /**
  * Called after all plugins have been loaded.  This is called once for 
  * every plugin.  If a plugin late loads, it will be called immediately 
  * after OnPluginStart().
  */
-forward void OnAllPluginsLoaded();
+forward OnAllPluginsLoaded();
 
 /**
  * Returns the calling plugin's Handle.
@@ -462,7 +461,7 @@ native GetExtensionFileStatus(const String:name[], String:error[]="", maxlength=
  *
  * @param name			Library name.
  */
-forward void OnLibraryAdded(const String:name[]);
+forward OnLibraryAdded(const String:name[]);
 
 /**
  * Called right before a library is removed that the current plugin references 
@@ -471,7 +470,7 @@ forward void OnLibraryAdded(const String:name[]);
  *
  * @param name			Library name.
  */
-forward void OnLibraryRemoved(const String:name[]);
+forward OnLibraryRemoved(const String:name[]);
 
 #define MAPLIST_FLAG_MAPSFOLDER		(1<<0)		/**< On failure, use all maps in the maps folder. */
 #define MAPLIST_FLAG_CLEARARRAY		(1<<1)		/**< If an input array is specified, clear it before adding. */
@@ -565,7 +564,7 @@ forward bool:OnClientFloodCheck(client);
  * @param blocked		True if client flooded last "say", false otherwise.
  * @noreturn
  */
-forward void OnClientFloodResult(client, bool:blocked);
+forward OnClientFloodResult(client, bool:blocked);
 
 /**
  * Feature types.

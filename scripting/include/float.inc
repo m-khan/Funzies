@@ -35,7 +35,6 @@
 #endif
 #define _float_included
 
-#if !defined __sourcepawn2__
 /**
  * Converts an integer into a floating point value.
  *
@@ -43,7 +42,6 @@
  * @return				Floating point value.
  */
 native Float:float(value);
-#endif
 
 /**
  * Multiplies two floats together.
@@ -246,7 +244,6 @@ stock RoundFloat(Float:value)
  * User defined operators.
  *
  */
-#if !defined __sourcepawn2__
 #pragma rational Float
 
 native bool:__FLOAT_GT__(Float:a, Float:b);
@@ -371,7 +368,6 @@ stock bool:operator<=(oper1, Float:oper2)
 forward operator%(Float:oper1, Float:oper2);
 forward operator%(Float:oper1, oper2);
 forward operator%(oper1, Float:oper2);
-#endif // __sourcepawn2__
 
 #define FLOAT_PI 3.1415926535897932384626433832795
 
