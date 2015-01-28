@@ -146,7 +146,9 @@ public Action:EquipKnifeSpawn(Handle:timer, any:client)
 public EquipKnife(any:client, bool:fromMenu)
 {
 	// DEBUG PrintToChatAll("Equiping %i with %i", client, KnifeType[client]);
-	if(KnifeType[client] >= 0 && IsPlayerAlive(client) && GetConVarInt(g_Cvar_Enabled))
+	g_Cvar_Enabled = FindConVar("sm_knifemenu_enabled");
+	// DEBUGPrintToChat(client, "%i", GetConVarInt(g_Cvar_Enabled));
+	if(KnifeType[client] >= 0 && IsPlayerAlive(client) && GetConVarInt(g_Cvar_Enabled) > 0)
 	{
 		GetClientWeapon(client, weaponName, sizeof(weaponName));
 		new wepIdx;
@@ -230,6 +232,8 @@ public EquipKnife(any:client, bool:fromMenu)
 					PrintToChat(client, "\x01Enjoy your \x03Butterfly Knife\x01!");
 			}
 		}
+		g_Cvar_Reequip = FindConVar("sm_knifemenu_reequip_primary");
+
 		if(fromMenu == false && GetConVarInt(g_Cvar_Reequip) > 0)
 		{
 			//PrintToChat(client, "%s", weaponName);
