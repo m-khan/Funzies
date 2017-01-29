@@ -49,3 +49,5 @@ Temporary Items
 ExampleBot/.settings/org.eclipse.jdt.core.prefs
 *.dll
 ExampleBot/lib/bwmirror_v2_5.jar
+*.bwta
+*.log
