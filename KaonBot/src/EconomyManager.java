@@ -1,9 +1,9 @@
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import bwapi.Color;
 import bwapi.Game;
-import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwta.BWTA;
@@ -14,9 +14,6 @@ public class EconomyManager extends AbstractManager{
 	
 	private final double ENEMY_BASE = 1.0;
 	
-	private ArrayList<Miner> minerList = new ArrayList<Miner>();
-	private ArrayList<Unit> mineralFields = new ArrayList<Unit>();
-	private ArrayList<Unit> gasGeysers = new ArrayList<Unit>();
 	private ArrayList<Base> bases = new ArrayList<Base>();
 	
 	public EconomyManager(double baselinePriority)
@@ -24,6 +21,11 @@ public class EconomyManager extends AbstractManager{
 		super(baselinePriority);
 	}
 	
+	@Override
+	public String getName(){
+		return "ECONOMY";
+	}
+
 	public void init(Game game){
 		List<BaseLocation> baseLocations = BWTA.getBaseLocations();
 		BaseLocation start = BWTA.getStartLocation(game.self());
@@ -35,28 +37,37 @@ public class EconomyManager extends AbstractManager{
 	
 	public List<ProductionOrder> getProductionRequests(){
 		ArrayList<ProductionOrder> list = new ArrayList<ProductionOrder>();
-		Base nextExpand = null;
-		double expandScore = Double.MIN_VALUE;
+		double[] expandScores = new double[bases.size()];
+		Base init = bases.get(0);
+		double highScore = init.gdFromEnemy - init.gdFromStart;
+		double lowScore = highScore;
 		
+		// normalize and use all expand scores
+		int i = 0;
 		for(Base b: bases){
 			if(b.cc != null && b.cc.exists()){
 				list.add(new UnitOrder(50, 0, this.usePriority(0.85), b.cc, UnitType.Terran_SCV));
 			}
-			else{
-				double score = b.gdFromEnemy - b.gdFromStart;
-//				System.out.println(b.location.getPosition() + ": " + b.gdFromEnemy + " - " +  b.gdFromStart + " = " + score);
-
-				if(score > expandScore){
-					expandScore = score;
-					nextExpand = b;
-				}
+			double score = b.gdFromEnemy - b.gdFromStart;
+			expandScores[i] = score;
+			if(score > highScore){
+				highScore = score;
 			}
+			else if(score < lowScore){
+				lowScore = score;
+			}
+			i++;
 		}
-		
-		
-		if(nextExpand != null){
-			list.add(new BuildingOrder(400, 0, this.usePriority(0.5), null, 
-					UnitType.Terran_Command_Center, nextExpand.location.getTilePosition()));
+
+		for(i = 0; i < bases.size(); i++){
+			Base b = bases.get(i);
+			double nScore = expandScores[i];
+			nScore = nScore - lowScore;
+			nScore = nScore / (highScore - lowScore);
+			if(b.cc == null) {
+				list.add(new BuildingOrder(400, 0, this.usePriority(0.5 * nScore), null, 
+						UnitType.Terran_Command_Center, b.location.getTilePosition()));
+			}
 		}
 		return list;
 	}
@@ -82,7 +93,7 @@ public class EconomyManager extends AbstractManager{
 			double distance = 0;
 			for(BaseLocation bL: baseLocations){
 				if(!bL.getPoint().equals(start.getPoint())) {
-					System.out.println("Possble Enemy at " + bL);
+					System.out.println("Possble Enemy at " + bL.getPosition());
 					distance += BWTA.getGroundDistance(bL.getTilePosition(), location.getTilePosition());
 				}
 			}
@@ -143,8 +154,6 @@ public class EconomyManager extends AbstractManager{
 
 	public void handleNewUnit(Unit unit, boolean friendly){
 		if(unit.getType().isMineralField()){
-			mineralFields.add(unit);
-			
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
 				if(distance < 500){
@@ -153,8 +162,6 @@ public class EconomyManager extends AbstractManager{
 			}
 		}
 		else if(unit.getType() == UnitType.Resource_Vespene_Geyser){
-			gasGeysers.add(unit);
-			
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
 				if(distance < 500){
@@ -188,18 +195,12 @@ public class EconomyManager extends AbstractManager{
 		}
 	}
 
-	public List<Unit> runFrame(){
-		ArrayList<Unit> toReturn = new ArrayList<Unit>();
-		for(Base b: bases){
-			toReturn.addAll(b.update());
-		}
-		return toReturn;
-		
-	}
-	
 	@Override
-	public String getName(){
-		return "ECONOMY";
+	public void runFrame(){
+		for(Base b: bases){
+			b.update();
+		}
+		
 	}
 	
 	@Override
@@ -219,38 +220,57 @@ public class EconomyManager extends AbstractManager{
 		return claims;
 	}
 
-	@Override
-	public ArrayList<Unit> assignNewUnitBehaviors() {
-		ArrayList<Unit> returnList = new ArrayList<Unit>();
-		for(Unit unit: newUnits){
-			if(unit.getType().isWorker())
-			{
-				int max = 0;
-				Base minBase = null;
-				for(Base b: bases){
-					if(b.cc != null && b.requiredMiners() > max){
-						max = b.requiredMiners();
-						minBase = b;
-					}
-				}
-				if(minBase != null){
-					if(!minBase.addMiner(unit)){
-						returnList.add(unit);
-					}
-				}
-				else{
-					// TODO: what do we do if there are no bases?
-				}
-				
-			}
-			else{
-				if(unit.exists()){
-					returnList.add(unit);
+	public void removeMiner(Claim cl){
+		for(Base b: bases){
+			Iterator<Miner> it = b.miners.iterator();
+			while(it.hasNext()){
+				if(it.next().getUnit() == cl.unit){
+					System.out.println("REMOVING MINER");
+					it.remove();
 				}
 			}
 		}
+	}
+
+	@Override
+	protected void addCommandeerCleanup(Claim cl){
+		cl.addOnCommandeer(cl.new CommandeerRunnable(cl) {
+			@Override
+			public void run() {
+				removeMiner((Claim) arg);
+			}
+		});
+	}
+	
+	@Override
+	public void assignNewUnitBehaviors() {
+		for(Unit unit: newUnits){
+			if(unit.exists() && unit.getType().isWorker())
+			{
+				// check close base to see if it needs the worker
+				Base newBase = null;
+				for(Base b: bases){
+					double distance = b.location.getDistance(unit.getPosition());
+					if(distance < 300){
+						newBase = b;
+						break;
+					}
+				}
+				if(newBase == null || newBase.requiredMiners() > 0){
+					// check all bases and see which needs the worker the most
+					int max = -1;
+					newBase = null;
+					for(Base b: bases){
+						if(b.cc != null && b.requiredMiners() > max){
+							max = b.requiredMiners();
+							newBase = b;
+						}
+					}
+				}
+				if(newBase != null) newBase.addMiner(unit);
+			}
+		}
 		newUnits.clear();
-		return returnList;
 	}
 
 	private class Miner extends Behavior{
@@ -277,6 +297,7 @@ public class EconomyManager extends AbstractManager{
 
 	@Override
 	public void displayDebugGraphics(Game game) {
+		super.displayDebugGraphics(game);
 		for(Base b: bases){
 			if(b.cc != null){
 				game.drawTextMap(b.cc.getPosition(), "Patches: " + b.mins.size() + "\nWorkers: " + b.miners.size());
@@ -284,9 +305,8 @@ public class EconomyManager extends AbstractManager{
 				for(Unit m: b.mins){
 					game.drawLineMap(b.cc.getPosition(), m.getPosition(), new Color(100, 100, 200));
 				}
-				game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
+				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}
 		}
 	}
-
 }

@@ -7,11 +7,12 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 	private int minerals;
 	private int gas;
 	private double priority;
-	protected boolean executed;
+	protected boolean executed = false;
 	public static final int RESERVATION = 0;
 	public static final int UNIT = 1;
 	public static final int BUILDING = 2;
 	public static final int ADDON = 3;
+	private boolean isSpent = false;
 	private boolean isDone = false;
 	
 	public ProductionOrder(int type, int minerals, int gas, double priority){
@@ -19,7 +20,6 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 		this.minerals = minerals;
 		this.gas = gas;
 		this.priority = priority;
-		executed = false;
 		
 	}
 	
@@ -54,7 +54,15 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 	public boolean isDone(){
 		return isDone;
 	}
-
+	
+	protected void setSpent(){
+		isSpent = true;
+	}
+	
+	public boolean isSpent(){
+		return isSpent;
+	}
+	
 	public abstract boolean execute();
 	
 	public int compare(ProductionOrder o1, ProductionOrder o2){

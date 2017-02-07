@@ -3,7 +3,7 @@ import java.util.List;
 
 import bwapi.Unit;
 
-public abstract class TempManager{
+public abstract class TempManager implements UnitCommander{
 	
 	private List<Claim> claims;
 	private boolean done = false;
@@ -21,6 +21,10 @@ public abstract class TempManager{
 		this.claims = claims;
 	}
 	
+	@Override public String getName(){
+		return this.toString();
+	}
+	
 	public abstract void runFrame();
 	protected void setDone(){
 		done = true;
@@ -28,15 +32,21 @@ public abstract class TempManager{
 	public boolean isDone(){
 		return done;
 	}
-	public List<Claim> getClaims(){
+	
+	public void cancel(){
+		freeUnits();
+		setDone();
+	}
+	
+	@Override
+	public List<Claim> getAllClaims(){
 		return claims;
 	}
-	public List<Unit> freeUnits(){
-		ArrayList<Unit> toReturn = new ArrayList<Unit>();
+	
+	public void freeUnits(){
 		for(Claim c: claims){
-			toReturn.add(c.unit);
+			c.free();
 		}
 		claims.clear();
-		return toReturn;
 	}
 }

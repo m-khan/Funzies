@@ -1,6 +1,8 @@
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import bwapi.DefaultBWListener;
 import bwapi.Game;
@@ -21,6 +23,7 @@ public class KaonBot extends DefaultBWListener {
     private static ArrayList<Manager> managerList = new ArrayList<Manager>();
     private static ArrayList<TempManager> tempManagers = new ArrayList<TempManager>();
     private ArrayList<Unit> unclaimedUnits = new ArrayList<Unit>();
+    private Map<Integer, Claim> masterClaimList = new HashMap<Integer, Claim>();
     private BuildingPlacer bpInstance;
     private ProductionQueue pQueue;
 
@@ -49,11 +52,8 @@ public class KaonBot extends DefaultBWListener {
     @Override
     public void onUnitComplete(Unit unit) {
     	try{
-    		game.printf("onUnitComplete()");
-        	if(unit.getPlayer() == self && !unit.getType().isBuilding()){
-        		unclaimedUnits.add(unit);
-        	}
-        	else{
+//    		game.printf("onUnitComplete()");
+        	if(unit.getPlayer() == self && unit.getType().isBuilding()){
         		for(Manager m: managerList){
         			m.handleCompletedBuilding(unit, unit.getPlayer() == self);
         		}
@@ -84,7 +84,13 @@ public class KaonBot extends DefaultBWListener {
     	try{
     		//game.printf("onUnitDestroy()");
     		System.out.println("Unit Destroyed: " + unit.getType());
-    	
+    		Claim toCleanup = masterClaimList.remove(unit.getID());
+    		
+    		if(toCleanup != null){
+    			// notify the manager the unit has been "commandeered" by the reaper
+    			toCleanup.commandeer(null, Double.MAX_VALUE); 
+    		}
+    		
     		if(unit.getType().isBuilding()) bpInstance.free(unit);
     	}catch(Exception e){
     		game.printf("Error in onUnitDestroy(): " + e);
@@ -116,7 +122,7 @@ public class KaonBot extends DefaultBWListener {
 	        }
 	        
 	//        BWTA.getBaseLocations();
-	        unclaimedUnits.addAll(self.getUnits());
+	        //unclaimedUnits.addAll(self.getUnits());
 	        
 	        for(Unit u : game.getAllUnits()){
 	        	if(u.getType().isBuilding() || u.getType().isResourceDepot()) bpInstance.reserve(u);
@@ -144,16 +150,15 @@ public class KaonBot extends DefaultBWListener {
 
     	StringBuilder output = new StringBuilder("===MANAGERS===\n");
     	for (Manager manager : managerList){
-    		output.append(manager.getName()).append(": \n").append(manager.getStatus()).append("\n");
+    		output.append(manager.getName()).append(": \n").append(manager.getStatus());
     	}
 
-    	handleUnclaimedUnits(output);
-        
+    	output.append("TEMP MANAGERS: " + tempManagers.size() + "\n");
     	Iterator<TempManager> it = tempManagers.iterator();
     	while(it.hasNext()){
     		TempManager next = it.next();
     		if(next.isDone()){
-    			unclaimedUnits.addAll(next.freeUnits());
+    			next.freeUnits();
     			it.remove();
     		}
     		else
@@ -162,7 +167,12 @@ public class KaonBot extends DefaultBWListener {
     		}
     	}
     	
-    	
+    	handleUnclaimedUnits(output);
+    	for (Manager manager : managerList){
+    		manager.assignNewUnitBehaviors();
+    		manager.runFrame();
+    	}
+
         pQueue.clear();
         for(Manager m: managerList){
         	pQueue.addAll(m.getProductionRequests());
@@ -178,10 +188,18 @@ public class KaonBot extends DefaultBWListener {
     
     public void handleUnclaimedUnits(StringBuilder output){
     	// Give the managers a chance to claim new units
-    	output.append("Unclaimed Units:\n");
-    	for (Unit unit : unclaimedUnits){
-    		output.append(unit.getType().toString()).append(": ").append(unit.getPosition().getPoint().toString()).append("\n");
+    	
+    	for(Unit u: self.getUnits()){
+    		if(u.exists() && u.isCompleted() &&
+    				!masterClaimList.containsKey(u.getID())){
+    			unclaimedUnits.add(u);
+    		}
     	}
+    	
+    	output.append("Unclaimed Units: " + unclaimedUnits.size() + "\n");
+//    	for (Unit unit : unclaimedUnits){
+//    		output.append(unit.getType().toString()).append(": ").append(unit.getPosition().getPoint().toString()).append("\n");
+//    	}
     	
     	// Make sure all the units in the claims list exist
     	Iterator<Unit> it = unclaimedUnits.iterator();
@@ -210,25 +228,35 @@ public class KaonBot extends DefaultBWListener {
     	// Resolve all claims and assign the new units
     	unclaimedUnits.clear(); // this list will be repopulated with the leftovers
     	for(Claim claim : topClaims){
-    		if(claim.getManager() == null){
-    			unclaimedUnits.add(claim.unit);
+    		if(claim.getCommander() != null){
+    			claim.addOnCommandeer(claim.new CommandeerRunnable() {
+					@Override
+					public void run() {
+						if(newManager == null){
+							masterClaimList.remove(claim.unit.getID());
+						}
+					}
+				});
+    			
+    			claim.getCommander().assignNewUnit(claim);
+    			Claim duplicate = masterClaimList.put(claim.unit.getID(), claim);
+    			if(duplicate != null){
+    				System.err.println("WARNING - Duplicate claim: " + claim);
+    				duplicate.free(); // attempt to clean up the old claim
+    			}
     		}
-    		else{
-    			claim.getManager().assignNewUnit(claim);
-    		}
-    	}
-    	
-    	// TODO this is dumb fix it
-    	for (Manager manager : managerList){
-    		unclaimedUnits.addAll(manager.assignNewUnitBehaviors());
-    		unclaimedUnits.addAll(manager.runFrame());
     	}
     }
     
     public void displayDebugGraphics(){
+    	//TODO add flag
+    	
     	bpInstance.drawReservations();
     	for(Manager m: managerList){
     		m.displayDebugGraphics(game);
+    	}
+    	for(UnitCommander c: tempManagers){
+    		c.displayDebugGraphics(game);
     	}
     }
     

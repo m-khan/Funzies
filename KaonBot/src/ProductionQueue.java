@@ -34,12 +34,19 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 		// remove all finished orders from active orders
 		Iterator<ProductionOrder> it = activeOrders.iterator();
 		while(it.hasNext()){
-			if(it.next().isDone()) it.remove();
+			if(it.next().isDone()){
+				it.remove();
+			}
+		}
+		output.append("ACTIVE ORDRES: " + activeOrders.size() + "\n");
+		
+		for(ProductionOrder o: activeOrders){
+			output.append("AO: " + o.toString() + "\n");
 		}
 		
 		while(	peek() != null && 
-				peek().getMinerals() <= (min + minRes) && 
-				peek().getGas() <= (gas + gasRes)){
+				peek().getMinerals() <= (min - minRes) && 
+				peek().getGas() <= (gas - gasRes)){
 			
 			ProductionOrder toExecute = poll();
 			
@@ -52,7 +59,11 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 			}
 			
 			if(isDuplicate){
-				output.append("=" + toExecute + "\n");
+				output.append("=" + toExecute + " - " + minRes  + "\n");
+				if(!toExecute.isSpent()){
+					minRes += toExecute.getMinerals();
+					gasRes += toExecute.getGas();
+				}
 			}
 			else if(toExecute.getType() == ProductionOrder.UNIT &&
 					((UnitOrder) toExecute).getSupply() <= freeSupply &&
@@ -60,19 +71,25 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				System.out.println("Producing " + toExecute);
 				toExecute.execute();
 				activeOrders.add(toExecute);
-				output.append("!" + toExecute + "\n");
+				output.append("!" + toExecute + " - " + minRes + "\n");
 			}
 			else if(toExecute.getType() == ProductionOrder.BUILDING && toExecute.canExecute()){
 				toExecute.execute();
 				activeOrders.add(toExecute);
-				output.append("!" + toExecute + "\n");
+				if(!toExecute.isSpent()){
+					minRes += toExecute.getMinerals();
+					gasRes += toExecute.getGas();
+				}
+
+				output.append("!" + toExecute + " - " + minRes  + "\n");
 			} else {
-				output.append("*" + toExecute + "\n");
+				output.append("*" + toExecute + " - " + minRes  + "\n");
 				
 				//TODO calculate actual reserve needed based on timeUntilExecutable
-//				reserve.add(toExecute);
-				minRes += toExecute.getMinerals();
-				gasRes += toExecute.getGas();
+				if(!toExecute.isSpent()){
+					minRes += toExecute.getMinerals();
+					gasRes += toExecute.getGas();
+				}
 			}
 		}
 		while(peek() != null){

@@ -1,3 +1,4 @@
+import java.text.DecimalFormat;
 import java.util.Comparator;
 
 import bwapi.Unit;
@@ -16,7 +17,8 @@ public class UnitOrder extends ProductionOrder implements Comparator<ProductionO
 	}
 	
 	public String toString(){
-		return  toProduce + " @ " + producer.getType() + producer.getPosition() + " " +super.getPriority();
+		DecimalFormat df = new DecimalFormat("#.##");
+		return  toProduce + " @ " + producer.getType() + producer.getPosition() + " " + df.format(super.getPriority());
 	}
 	
 	public String getSignature(){

@@ -4,38 +4,53 @@ import java.util.List;
 import bwapi.Unit;
 
 public class Claim implements Comparable<Claim>{
-	private Manager manager;
+	private UnitCommander commander;
 	private double priority;
 	public final Unit unit;
 	private List<Runnable> onCommandeer = new ArrayList<Runnable>();
 	
-	public Claim(Manager man, double cl, Unit u)
+	public Claim(UnitCommander man, double cl, Unit u)
 	{
-		manager = man;
+		commander = man;
 		priority = cl;
 		unit = u;
 	}
 
+	public String toString(){
+		return unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
+	}
+	
 	public void addOnCommandeer(Runnable r){
 		onCommandeer.add(r);
 	}
 	
-	public boolean commandeer(Manager newManager, double newClaim){
+	public void free(){
+		commandeer(null, Double.MAX_VALUE);
+	}
+	
+	public boolean commandeer(UnitCommander newManager, double newClaim){
 		if(newClaim < priority){
 			return false;
 		}
 
 		for(Runnable r: onCommandeer){
+			if(r instanceof CommandeerRunnable){
+				((CommandeerRunnable) r).setNewValues(this, newManager);
+			}
 			r.run();
 		}
 		
-		manager = newManager;
+		commander = newManager;
 		priority = newClaim;
 		return true;
 	}
 	
-	public Manager getManager(){
-		return manager;
+	public void removeCommandeerRunnable(Runnable r){
+		onCommandeer.remove(r);
+	}
+	
+	public UnitCommander getCommander(){
+		return commander;
 	}
 	
 	public double getPriority(){
@@ -48,16 +63,28 @@ public class Claim implements Comparable<Claim>{
 	}
 	
 	public abstract class CommandeerRunnable implements Runnable {
+		Claim claim = null;
+		UnitCommander newManager = null;
 		Object arg;
+		
+		protected void setNewValues(Claim claim, UnitCommander newManager){
+			this.claim = claim;
+			this.newManager = newManager;
+		}
+		
+		public CommandeerRunnable(Object arg) {
+			this.arg = arg;
+		}
 		
 		public CommandeerRunnable()
 		{
-			arg = null;
-		}
-		
-		public CommandeerRunnable(Object parameter) {
-			arg = parameter;
+			this(null);
 		}
 
+		public void deleteThis()
+		{
+			
+		}
+		@Override
 		public abstract void run();
 	}}
