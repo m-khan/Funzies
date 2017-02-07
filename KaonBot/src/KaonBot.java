@@ -50,6 +50,46 @@ public class KaonBot extends DefaultBWListener {
     }
 
     @Override
+    public void onStart() {
+    	try{
+	        game = mirror.getGame();
+    		//game.printf("onStart()");
+	        game.enableFlag(1);
+	        self = game.self();
+	        pQueue = new ProductionQueue(self);
+	        bpInstance = BuildingPlacer.getInstance();
+	
+	        game.setLocalSpeed(15);
+	        
+	        //Use BWTA to analyze map
+	        //This may take a few minutes if the map is processed first time!
+	        BWTA.readMap();
+	        BWTA.analyze();
+
+	        EconomyManager econ = new EconomyManager(1.0);
+	        DepotManager depot = new DepotManager(1.0, econ, self);
+	        
+	        managerList.add(econ);
+	        managerList.add(depot);
+	        
+	        for(Manager m: managerList){
+	        	m.init(game);
+	        }
+	        
+	//        BWTA.getBaseLocations();
+	        //unclaimedUnits.addAll(self.getUnits());
+	        
+	        for(Unit u : game.getAllUnits()){
+	        	if(u.getType().isBuilding() || u.getType().isResourceDepot()) bpInstance.reserve(u);
+	        }
+    	}catch(Exception e){
+    		game.printf("Error in onStart(): " + e);
+    		e.printStackTrace();
+    	}
+    }
+
+
+    @Override
     public void onUnitComplete(Unit unit) {
     	try{
 //    		game.printf("onUnitComplete()");
@@ -98,41 +138,6 @@ public class KaonBot extends DefaultBWListener {
     	}
     }
     
-    @Override
-    public void onStart() {
-    	try{
-	        game = mirror.getGame();
-    		//game.printf("onStart()");
-	        game.enableFlag(1);
-	        self = game.self();
-	        pQueue = new ProductionQueue(self);
-	        bpInstance = BuildingPlacer.getInstance();
-	
-	        game.setLocalSpeed(15);
-	        
-	        //Use BWTA to analyze map
-	        //This may take a few minutes if the map is processed first time!
-	        BWTA.readMap();
-	        BWTA.analyze();
-
-	        managerList.add(new EconomyManager(1.0));
-	        
-	        for(Manager m: managerList){
-	        	m.init(game);
-	        }
-	        
-	//        BWTA.getBaseLocations();
-	        //unclaimedUnits.addAll(self.getUnits());
-	        
-	        for(Unit u : game.getAllUnits()){
-	        	if(u.getType().isBuilding() || u.getType().isResourceDepot()) bpInstance.reserve(u);
-	        }
-    	}catch(Exception e){
-    		game.printf("Error in onStart(): " + e);
-    		e.printStackTrace();
-    	}
-    }
-
     @Override
     public void onFrame() {
     	try{
@@ -217,12 +222,14 @@ public class KaonBot extends DefaultBWListener {
     	for (Manager manager : managerList){
     		List<Double> claims = manager.claimUnits(unclaimedUnits);
 
-    		for(int i = 0; i < num_units; i++){
-    			Double newClaim = claims.get(i);
-        		if(topClaims.get(i).getPriority() < newClaim){
-        			topClaims.set(i, new Claim(manager, newClaim, unclaimedUnits.get(i)));
-        		}
-        	}
+    		if(claims != null){
+	    		for(int i = 0; i < num_units; i++){
+	    			Double newClaim = claims.get(i);
+	        		if(topClaims.get(i).getPriority() < newClaim){
+	        			topClaims.set(i, new Claim(manager, newClaim, unclaimedUnits.get(i)));
+	        		}
+	        	}
+    		}
     	}
 
     	// Resolve all claims and assign the new units

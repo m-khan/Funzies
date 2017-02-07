@@ -177,8 +177,7 @@ public class EconomyManager extends AbstractManager{
 						b.cc = unit;
 				}
 			}
-			else{
-				//TODO ignore first base
+			else if(!friendly){
 				incrementPriority(ENEMY_BASE, false);
 			}
 		}

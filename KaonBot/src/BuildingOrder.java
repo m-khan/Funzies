@@ -41,7 +41,7 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	@Override
 	public String toString(){
 		DecimalFormat df = new DecimalFormat("#.##");
-		String toReturn =  toProduce + " @ " + position.toPosition() + " " + df.format(getPriority()) + " " + executed;
+		String toReturn =  toProduce + " @ " + position.toPosition() + " " + df.format(getPriority());
 		if(buildManager != null){
 			toReturn += "\nBuilder: " + buildManager.getAllClaims().get(0).unit.getPosition();
 			toReturn += " Spent:" + this.isSpent();
@@ -108,7 +108,6 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	
 	private void findNewProducer(){
 		List<Claim> claimList = KaonBot.getAllClaims();
-		
 		tempClaim = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV);
 		producer = tempClaim.unit;
 	}

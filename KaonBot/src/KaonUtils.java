@@ -35,7 +35,7 @@ public class KaonUtils {
 			Claim next = it.next();
 			if(ut == null || next.unit.getType() == ut){
 				double newDist = next.unit.getDistance(pos);
-				if(distance > newDist){
+				if(distance > newDist && next.canCommandeer()){
 					distance = newDist;
 					closest = next;
 				}

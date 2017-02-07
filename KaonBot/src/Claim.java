@@ -8,12 +8,15 @@ public class Claim implements Comparable<Claim>{
 	private double priority;
 	public final Unit unit;
 	private List<Runnable> onCommandeer = new ArrayList<Runnable>();
+	private int claimFrame;
+	private static final int CLAIM_LOCK = 100;
 	
 	public Claim(UnitCommander man, double cl, Unit u)
 	{
 		commander = man;
 		priority = cl;
 		unit = u;
+		claimFrame = KaonBot.getGame().getFrameCount();
 	}
 
 	public String toString(){
@@ -28,8 +31,13 @@ public class Claim implements Comparable<Claim>{
 		commandeer(null, Double.MAX_VALUE);
 	}
 	
+	public boolean canCommandeer(){
+		int currentFrame = KaonBot.getGame().getFrameCount();
+		return (currentFrame - CLAIM_LOCK) > claimFrame;
+	}
+	
 	public boolean commandeer(UnitCommander newManager, double newClaim){
-		if(newClaim < priority){
+		if(!canCommandeer() || newClaim < priority){
 			return false;
 		}
 
