@@ -13,10 +13,29 @@ public class BuildingPlacer {
 	private static BuildingPlacer buildingPlacer = new BuildingPlacer();
 	private Game game;
 	private boolean[][] reservationMap;
+	private Color[][] reservationColors;
 	
 	private BuildingPlacer(){
 		game = KaonBot.mirror.getGame();
 		reservationMap = new boolean[game.mapWidth()][game.mapHeight()];
+		reservationColors = new Color[game.mapWidth()][game.mapHeight()];
+	}
+	
+	public void reserve(TilePosition p, UnitType building, Color color){
+		if(!building.isBuilding()){
+			KaonBot.print("WARNING - tried to reserve and non-unit " + p.getPoint());
+			return;
+		}
+		
+		for(int x = p.getX(); x == p.getX() + building.tileHeight(); x++){
+			for(int y = p.getY(); y == p.getX() + building.tileHeight(); y++){
+				if(!reservationMap[x][y]){
+					reservationMap[x][y] = true;
+					reservationColors[x][y] = color;
+				}
+			}
+		}
+		
 	}
 	
 	public void reserve(Unit u){
@@ -41,15 +60,22 @@ public class BuildingPlacer {
 			for(int j = 0; j < reservationMap[i].length; j++)
 			{
 				if(reservationMap[i][j]){
-					game.drawBoxMap(i * 32, j * 32, i * 32 + 32, j * 32 + 32, new Color(100, 100, 100), false);
+					Color color;
+					if(reservationColors[i][j] != null){
+						color = reservationColors[i][j];
+					} else {
+						color = new Color(100, 100, 100);
+					}
+					
+					game.drawBoxMap(i * 32, j * 32, i * 32 + 32, j * 32 + 32, color, false);
 				}
 			}
 		}
 	}
 	
-	public Unit getSuitableBuilder(TilePosition position){
+	public Unit getSuitableBuilder(TilePosition position, double priority, UnitCommander searcher){
 		List<Claim> claimList = KaonBot.getAllClaims();
-		Claim c = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV);
+		Claim c = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, priority, searcher);
 		if(c != null){
 			return c.unit;
 		}
@@ -72,7 +98,6 @@ public class BuildingPlacer {
 						) return n.getTilePosition();
 			}
 		}
-		
 		while ((maxDist < stopDist) && (ret == null)) {
 			for (int i=aroundTile.getX()-maxDist; i<=aroundTile.getX()+maxDist; i++) {
 				for (int j=aroundTile.getY()-maxDist; j<=aroundTile.getY()+maxDist; j++) {
@@ -92,7 +117,7 @@ public class BuildingPlacer {
 			maxDist += 2;
 		}
 		
-		if (ret == null) game.printf("Unable to find suitable build position for "+buildingType.toString());
+		if (ret == null) KaonBot.print("Unable to find suitable build position for " + buildingType.toString());
 		return ret;
 	}
 	
@@ -104,9 +129,6 @@ public class BuildingPlacer {
 	
 	public static TilePosition getTilePosition(Unit u){
 		return getTilePosition(u.getTop(), u.getLeft());
-	}
-	
-	public void reserve(TilePosition p, int width, int height){
 	}
 	
 	public static BuildingPlacer getInstance(){

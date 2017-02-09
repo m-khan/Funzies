@@ -68,28 +68,30 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 			else if(toExecute.getType() == ProductionOrder.UNIT &&
 					((UnitOrder) toExecute).getSupply() <= freeSupply &&
 					toExecute.canExecute()){
-				System.out.println("Producing " + toExecute);
+				// Unit can be executed
+				KaonBot.print("Producing " + toExecute);
 				toExecute.execute();
 				activeOrders.add(toExecute);
-				output.append("!" + toExecute + " - " + minRes + "\n");
+				output.append("_" + toExecute + " - " + minRes + "\n");
 			}
 			else if(toExecute.getType() == ProductionOrder.BUILDING && toExecute.canExecute()){
+				// Building can be executed
 				toExecute.execute();
 				activeOrders.add(toExecute);
+				
+				// If the building hasn't started, we still need to reserve minerals
 				if(!toExecute.isSpent()){
 					minRes += toExecute.getMinerals();
 					gasRes += toExecute.getGas();
 				}
-
 				output.append("!" + toExecute + " - " + minRes  + "\n");
 			} else {
-				output.append("*" + toExecute + " - " + minRes  + "\n");
-				
-				//TODO calculate actual reserve needed based on timeUntilExecutable
+				// The order is already in progress we need to wait
 				if(!toExecute.isSpent()){
 					minRes += toExecute.getMinerals();
 					gasRes += toExecute.getGas();
 				}
+				output.append("*" + toExecute + " - " + minRes  + "\n");
 			}
 		}
 		while(peek() != null){

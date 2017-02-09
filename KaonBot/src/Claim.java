@@ -20,7 +20,14 @@ public class Claim implements Comparable<Claim>{
 	}
 
 	public String toString(){
-		return unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
+		try {
+			return unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
+		} catch (Exception e) {
+			KaonBot.print(unit + "");
+			KaonBot.print(commander + "");
+			KaonBot.print(onCommandeer + "");
+		}
+		return "BUGGED CLAIM toString()";
 	}
 	
 	public void addOnCommandeer(Runnable r){
@@ -31,13 +38,23 @@ public class Claim implements Comparable<Claim>{
 		commandeer(null, Double.MAX_VALUE);
 	}
 	
-	public boolean canCommandeer(){
-		int currentFrame = KaonBot.getGame().getFrameCount();
-		return (currentFrame - CLAIM_LOCK) > claimFrame;
+	public boolean canCommandeer(double priority, UnitCommander checker){
+		if((KaonBot.getGame().getFrameCount() - CLAIM_LOCK) < claimFrame){
+			//KaonBot.print("Cannot Commandeer " + this + ": claim locked.");
+			return false;
+		} else if(priority < this.priority){
+			//KaonBot.print("Cannot Commandeer " + this + ": priority too low.");
+			return false;
+		} else if(commander == checker){
+			//KaonBot.print("Cannot Commandeer " + this + ": already owned by manager.");
+			return false;
+		}
+		
+		return true;
 	}
 	
 	public boolean commandeer(UnitCommander newManager, double newClaim){
-		if(!canCommandeer() || newClaim < priority){
+		if(!canCommandeer(newClaim, newManager)){
 			return false;
 		}
 

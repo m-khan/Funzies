@@ -32,6 +32,14 @@ public class KaonBot extends DefaultBWListener {
     	return game;
     }
     
+    public static void print(String message){
+    	try {
+			System.out.println(game.getFrameCount() + " " + message);
+		} catch (Exception e) {
+			System.err.println("ERROR PRINTING MESSAGE");
+		}
+    }
+    
     public static List<Claim> getAllClaims(){
     	List<Claim> allClaims = new ArrayList<Claim>();
     	for(Manager m: managerList){
@@ -66,8 +74,8 @@ public class KaonBot extends DefaultBWListener {
 	        BWTA.readMap();
 	        BWTA.analyze();
 
-	        EconomyManager econ = new EconomyManager(1.0);
-	        DepotManager depot = new DepotManager(1.0, econ, self);
+	        EconomyManager econ = new EconomyManager(1.0, 0.5);
+	        DepotManager depot = new DepotManager(1.0, 0.1, econ, self);
 	        
 	        managerList.add(econ);
 	        managerList.add(depot);
@@ -123,7 +131,7 @@ public class KaonBot extends DefaultBWListener {
     public void onUnitDestroy(Unit unit){
     	try{
     		//game.printf("onUnitDestroy()");
-    		System.out.println("Unit Destroyed: " + unit.getType());
+    		KaonBot.print("Unit Destroyed: " + unit.getType());
     		Claim toCleanup = masterClaimList.remove(unit.getID());
     		
     		if(toCleanup != null){
@@ -153,6 +161,8 @@ public class KaonBot extends DefaultBWListener {
     public void runFrame(){
         //game.setTextSize(10);
 
+//    	KaonBot.print("FRAME: " + game.getFrameCount());
+    	
     	StringBuilder output = new StringBuilder("===MANAGERS===\n");
     	for (Manager manager : managerList){
     		output.append(manager.getName()).append(": \n").append(manager.getStatus());

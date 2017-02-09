@@ -25,7 +25,7 @@ public class KaonUtils {
 		return closest;
 	}
 
-	public static Claim getClosestClaim(Position pos, List<Claim> units, UnitType ut){
+	public static Claim getClosestClaim(Position pos, List<Claim> units, UnitType ut, double priority, UnitCommander searcher){
 		Iterator<Claim> it = units.iterator();
 
 		Claim closest = null;
@@ -35,7 +35,7 @@ public class KaonUtils {
 			Claim next = it.next();
 			if(ut == null || next.unit.getType() == ut){
 				double newDist = next.unit.getDistance(pos);
-				if(distance > newDist && next.canCommandeer()){
+				if(distance > newDist && next.canCommandeer(priority, searcher)){
 					distance = newDist;
 					closest = next;
 				}

@@ -10,13 +10,15 @@ import bwapi.Unit;
 public abstract class AbstractManager implements Manager{
 	private double priorityScore;
 	private double baselinePriority;
+	private double volitilityScore;
 	protected ArrayList<Unit> newUnits = new ArrayList<Unit>();
 	protected Map<Integer, Claim> claimList = new HashMap<Integer, Claim>();
 	private Color debugColor;
 	
-	public AbstractManager(double baselinePriority) {
+	public AbstractManager(double baselinePriority, double volitilityScore) {
 		this.baselinePriority = baselinePriority;
 		priorityScore = baselinePriority;
+		this.volitilityScore = volitilityScore;
 		debugColor = KaonUtils.getRandomColor();
 	}
 	
@@ -34,12 +36,11 @@ public abstract class AbstractManager implements Manager{
 		claim.addOnCommandeer(claim.new CommandeerRunnable(){
 			@Override
 			public void run() {
-				System.out.println(getName() + " releasing" + claim.unit);
+				System.out.println(getName() + " releasing " + claim.unit.getID());
 				removeClaim(claim);
 			}
 		});
 		addCommandeerCleanup(claim);
-		
 	}
 	
 	protected abstract void addCommandeerCleanup(Claim claim);
@@ -58,6 +59,10 @@ public abstract class AbstractManager implements Manager{
 		}
 		
 		return priorityScore * multiplier;
+	}
+	
+	public double getVolitility(){
+		return volitilityScore;
 	}
 	
 	public double usePriority(){

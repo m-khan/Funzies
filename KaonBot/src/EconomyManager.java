@@ -13,12 +13,14 @@ import bwta.BaseLocation;
 public class EconomyManager extends AbstractManager{
 	
 	private final double ENEMY_BASE = 1.0;
+	private final double SCV_MULT = 0.85;
+	private final double EXPO_MULT = 0.5;
 	
 	private ArrayList<Base> bases = new ArrayList<Base>();
 	
-	public EconomyManager(double baselinePriority)
+	public EconomyManager(double baselinePriority, double volatilityScore)
 	{
-		super(baselinePriority);
+		super(baselinePriority, volatilityScore);
 	}
 	
 	@Override
@@ -46,7 +48,7 @@ public class EconomyManager extends AbstractManager{
 		int i = 0;
 		for(Base b: bases){
 			if(b.cc != null && b.cc.exists()){
-				list.add(new UnitOrder(50, 0, this.usePriority(0.85), b.cc, UnitType.Terran_SCV));
+				list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
 			}
 			double score = b.gdFromEnemy - b.gdFromStart;
 			expandScores[i] = score;
@@ -65,7 +67,7 @@ public class EconomyManager extends AbstractManager{
 			nScore = nScore - lowScore;
 			nScore = nScore / (highScore - lowScore);
 			if(b.cc == null) {
-				list.add(new BuildingOrder(400, 0, this.usePriority(0.5 * nScore), null, 
+				list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), null, 
 						UnitType.Terran_Command_Center, b.location.getTilePosition()));
 			}
 		}
@@ -93,13 +95,11 @@ public class EconomyManager extends AbstractManager{
 			double distance = 0;
 			for(BaseLocation bL: baseLocations){
 				if(!bL.getPoint().equals(start.getPoint())) {
-					System.out.println("Possble Enemy at " + bL.getPosition());
 					distance += BWTA.getGroundDistance(bL.getTilePosition(), location.getTilePosition());
 				}
 			}
 			
 			gdFromEnemy = distance / baseLocations.size() - 1;
-			System.out.println(location.getPosition() + ": " + gdFromStart);
 		}
 		
 		protected void addMinerals(Unit unit){
@@ -224,7 +224,6 @@ public class EconomyManager extends AbstractManager{
 			Iterator<Miner> it = b.miners.iterator();
 			while(it.hasNext()){
 				if(it.next().getUnit() == cl.unit){
-					System.out.println("REMOVING MINER");
 					it.remove();
 				}
 			}

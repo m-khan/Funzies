@@ -38,8 +38,23 @@ public class UnitOrder extends ProductionOrder implements Comparator<ProductionO
 		return  producer.exists() && producer.getRemainingTrainTime() == 0 && producer.getTrainingQueue().size() == 0;
 	}
 	
-	public int timeUntilExecutable(){
-		return producer.getRemainingTrainTime();
+	@Override
+	public int getMinerals(){
+		// if it's ready to go, get all the minerals
+		if(producer.getTrainingQueue().size() == 0) {
+			return super.getMinerals();
+		}
+		// else reserve what we need
+		return (super.getMinerals() - (super.getMinerals() * producer.getRemainingTrainTime()) / producer.getTrainingQueue().get(0).buildTime());
 	}
+	
+	@Override
+	public int getGas(){
+		// see minerals
+		if(producer.getTrainingQueue().size() == 0) return super.getGas();
+
+		return (super.getGas() - (super.getGas() * producer.getRemainingTrainTime()) / producer.getTrainingQueue().get(0).buildTime());
+	}
+
 }
 

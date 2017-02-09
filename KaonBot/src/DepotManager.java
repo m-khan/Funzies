@@ -19,8 +19,8 @@ public class DepotManager extends AbstractManager {
 	Map<Integer, Unit> depotList = new HashMap<Integer, Unit>();
 	int frameLock = 0;
 	
-	public DepotManager(double baselinePriority, EconomyManager econ, Player player) {
-		super(baselinePriority);
+	public DepotManager(double baselinePriority, double volatilityScore, EconomyManager econ, Player player) {
+		super(baselinePriority, volatilityScore);
 		this.econ = econ;
 		this.player = player;
 	}
@@ -52,12 +52,34 @@ public class DepotManager extends AbstractManager {
 			frameLock -= 1;
 			return;
 		}
+		
+		if(player.supplyTotal() <= player.supplyUsed()){
+			if(player.minerals() > 100){
+				incrementPriority(getVolitility() * player.minerals() / 10, false);
+			}
+			incrementPriority(getVolitility(), false);
+		}
+		
 		findNextDepotSpot();
 		frameLock = 100;
 	}
 
+	private double getDepotPriority(){
+		int supply = player.supplyTotal();
+		for(Integer i: depotList.keySet()){
+			if(depotList.get(i).isConstructing()){
+				supply += 8;
+			}
+		}
+		
+		int used = player.supplyUsed();
+
+		double multiplier = 1.0 - ((supply - used) / 8.0);
+		return this.usePriority(multiplier);
+	}
+	
 	private void findNextDepotSpot(){
-		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(player.getStartLocation());
+		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(player.getStartLocation(), getDepotPriority(), this);
 		if(builder != null){
 			try{
 				nextDepot = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, player.getStartLocation());
@@ -74,17 +96,7 @@ public class DepotManager extends AbstractManager {
 			return toReturn;
 		}
 		
-		int supply = player.supplyTotal();
-		for(Integer i: depotList.keySet()){
-			if(depotList.get(i).isConstructing()){
-				supply += 8;
-			}
-		}
-		
-		int used = player.supplyUsed();
-
-		double multiplier = 1.0 - ((supply - used) / 8.0);
-		toReturn.add(new BuildingOrder(100, 0, this.usePriority(multiplier), null, 
+		toReturn.add(new BuildingOrder(100, 0, getDepotPriority(), null, 
 				UnitType.Terran_Supply_Depot, nextDepot));
 		return toReturn;
 	}

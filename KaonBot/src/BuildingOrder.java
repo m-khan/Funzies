@@ -15,7 +15,8 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	private UnitType toProduce;
 	private TilePosition position;
 	private BuildManager buildManager = null;
-
+	private final double priorityMultiplier = 100000.0; // multiplier used for commendeering SCVs
+	
 	public BuildingOrder(int minerals, int gas, double priority, Unit producer, UnitType toProduce, TilePosition position) {
 		super(ProductionOrder.BUILDING, minerals, gas, priority);
 		this.producer = producer;
@@ -57,29 +58,27 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	
 	@Override
 	public boolean execute(){
-		if(producer == null || !producer.exists()){
-			findNewProducer();
-		}
-		
-		if(producer == null || !producer.exists()){
-			System.err.println("Unable to find producer for " + this);
+		if(!canExecute()){
+			KaonBot.print("Failed to execute " + this);
 			return false;
 		}
 
-		if(tempClaim != null){
-			BuildManager bm = new BuildManager(tempClaim, this);
-			if(tempClaim.commandeer(bm, this.getPriority() * 10)){
-				tempClaim.addOnCommandeer(tempClaim.new CommandeerRunnable(bm) {
-					@Override
-					public void run() {
-						((BuildManager) arg).setDone();
-						setDone();
-					}
-				});
-				KaonBot.addTempManager(bm);
-				buildManager = bm;
-				executed = producer.build(toProduce, position);
-			}
+		if(tempClaim == null){
+			KaonBot.print("No claim for " + this);
+		}
+		
+		BuildManager bm = new BuildManager(tempClaim, this);
+		if(tempClaim.commandeer(bm, this.getPriority() * priorityMultiplier)){
+			tempClaim.addOnCommandeer(tempClaim.new CommandeerRunnable(bm) {
+				@Override
+				public void run() {
+					((BuildManager) arg).setDone();
+					setDone();
+				}
+			});
+			KaonBot.addTempManager(bm);
+			buildManager = bm;
+			executed = producer.build(toProduce, position);
 		}
 		
 		return executed;
@@ -103,13 +102,16 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 		if(producer == null || !producer.exists()){
 			findNewProducer();
 		}
+		
 		return producer != null && producer.exists() && KaonBot.getGame().canBuildHere(position, toProduce);
 	}
 	
 	private void findNewProducer(){
 		List<Claim> claimList = KaonBot.getAllClaims();
-		tempClaim = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV);
-		producer = tempClaim.unit;
+		tempClaim = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, this.getPriority() * priorityMultiplier, null);
+		if(tempClaim != null){
+			producer = tempClaim.unit;
+		}
 	}
 	
 	private class BuildManager extends TempManager{
@@ -121,7 +123,9 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			super(claim);
 			this.order = order;
 			debugColor = KaonUtils.getRandomColor();
-			System.out.println("Building order " + order + " started with: " + claim.unit.getType());
+			
+			BuildingPlacer.getInstance().reserve(order.getPosition(), order.toProduce, debugColor);
+			KaonBot.print("Building  " + order + " started with: " + claim.unit.getID());
 		}
 		
 		@Override
@@ -151,9 +155,12 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 
 		@Override
 		public void displayDebugGraphics(Game game) {
+			Unit builder = this.getAllClaims().get(0).unit;
 			game.drawCircleMap(order.getPosition().toPosition(), 20, debugColor, false);
-			game.drawCircleMap(this.getAllClaims().get(0).unit.getPosition(), 10, debugColor, true);
-			
+			game.drawCircleMap(builder.getPosition(), 10, debugColor, true);
+			if(builder.isConstructing()){
+				game.drawCircleMap(builder.getPosition(), 10, new Color(255, 0, 0), true);
+			}
 		}
 	}
 }
