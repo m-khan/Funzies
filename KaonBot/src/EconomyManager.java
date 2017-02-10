@@ -4,6 +4,7 @@ import java.util.List;
 
 import bwapi.Color;
 import bwapi.Game;
+import bwapi.Order;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwta.BWTA;
@@ -112,7 +113,7 @@ public class EconomyManager extends AbstractManager{
 				return false;
 			}
 			
-			miners.add(new Miner(unit, mins.get(0))); //TODO implement mineral lock
+			miners.add(new Miner(unit, mins.get((miners.size() + 1) % mins.size()))); //TODO implement mineral lock
 			return true;
 		}
 
@@ -152,11 +153,11 @@ public class EconomyManager extends AbstractManager{
 		}
 	}
 
-	public void handleNewUnit(Unit unit, boolean friendly){
+	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy){
 		if(unit.getType().isMineralField()){
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
-				if(distance < 500){
+				if(distance < 300){
 					b.addMinerals(unit);
 				}
 			}
@@ -164,7 +165,7 @@ public class EconomyManager extends AbstractManager{
 		else if(unit.getType() == UnitType.Resource_Vespene_Geyser){
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
-				if(distance < 500){
+				if(distance < 300){
 					b.gas = unit;
 				}
 			}
@@ -213,7 +214,7 @@ public class EconomyManager extends AbstractManager{
 				//claims.add(-1.0);
 			}
 			else{
-				claims.add(-1.0);
+				claims.add(DO_NOT_WANT);
 			}
 		}
 		return claims;
@@ -275,6 +276,9 @@ public class EconomyManager extends AbstractManager{
 
 		private Unit resource;
 		private UnitType resourceType;
+		private boolean returning = false;
+		private final int MICRO_LOCK = 2; //num frames to skip between micro actions
+		private int microCount = 0; 
 		
 		public Miner(Unit miner, Unit resource){
 			super(miner);
@@ -289,7 +293,15 @@ public class EconomyManager extends AbstractManager{
 		
 		@Override
 		public boolean update() {
-			return !resource.exists() && !getUnit().exists();
+			if(microCount < MICRO_LOCK || getUnit().getOrder() == Order.MiningMinerals 
+					|| getUnit().isCarryingMinerals() || getUnit().getOrder() == Order.WaitForMinerals)
+			{
+				microCount++;
+				return false;
+			}
+			microCount = 0;
+			
+			return !resource.exists() || !getUnit().exists();
 		}
 	}
 
@@ -298,10 +310,12 @@ public class EconomyManager extends AbstractManager{
 		super.displayDebugGraphics(game);
 		for(Base b: bases){
 			if(b.cc != null){
-				game.drawTextMap(b.cc.getPosition(), "Patches: " + b.mins.size() + "\nWorkers: " + b.miners.size());
+				game.drawTextMap(b.cc.getPosition(), "Patches: " + b.mins.size() + 
+													 "\nWorkers: " + b.miners.size() + 
+													 "\nNeed: " + b.requiredMiners());
 				
-				for(Unit m: b.mins){
-					game.drawLineMap(b.cc.getPosition(), m.getPosition(), new Color(100, 100, 200));
+				for(Miner m: b.miners){
+					game.drawLineMap(m.resource.getPosition(), m.getUnit().getPosition(), new Color(100, 100, 200));
 				}
 				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}

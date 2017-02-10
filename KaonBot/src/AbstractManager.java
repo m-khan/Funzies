@@ -1,3 +1,4 @@
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -11,9 +12,10 @@ public abstract class AbstractManager implements Manager{
 	private double priorityScore;
 	private double baselinePriority;
 	private double volitilityScore;
+	protected double DO_NOT_WANT = -1;
 	protected ArrayList<Unit> newUnits = new ArrayList<Unit>();
 	protected Map<Integer, Claim> claimList = new HashMap<Integer, Claim>();
-	private Color debugColor;
+	protected Color debugColor;
 	
 	public AbstractManager(double baselinePriority, double volitilityScore) {
 		this.baselinePriority = baselinePriority;
@@ -31,12 +33,13 @@ public abstract class AbstractManager implements Manager{
 	public void assignNewUnit(Claim claim){
 		claimList.put(claim.unit.getID(), claim);
 		newUnits.add(claim.unit);
+		KaonBot.print(getName() + " claiming " + claim.unit.getID() + " " + claim.unit.getType());
 		
 		// This makes sure the claim is removed if the unit is commandeered by another manager
 		claim.addOnCommandeer(claim.new CommandeerRunnable(){
 			@Override
 			public void run() {
-				System.out.println(getName() + " releasing " + claim.unit.getID());
+				KaonBot.print(getName() + " releasing " + claim.unit.getID() + " " + claim.unit.getType());
 				removeClaim(claim);
 			}
 		});
@@ -46,7 +49,9 @@ public abstract class AbstractManager implements Manager{
 	protected abstract void addCommandeerCleanup(Claim claim);
 	
 	private void removeClaim(Claim claim){
-		claimList.remove(claim);
+		if(claimList.remove(claim.unit.getID()) == null){
+			KaonBot.print("WARNING - Claim " + claim + " not removed properly", true);
+		}
 	}
 	
 	@Override
@@ -77,7 +82,8 @@ public abstract class AbstractManager implements Manager{
 
 	@Override
 	public String getStatus() {
-		return "PRIORITY=" + priorityScore + "/" + baselinePriority + "\nCLAIMS=" + claimList.size() + "\n";
+		DecimalFormat df = new DecimalFormat("#.####");
+		return "PRIORITY=" + df.format(priorityScore) + "/" + df.format(baselinePriority) + "\nCLAIMS=" + claimList.size() + "\n";
 	}
 
 	public abstract class Behavior{

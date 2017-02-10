@@ -4,6 +4,7 @@ import java.util.List;
 
 import bwapi.Color;
 import bwapi.Game;
+import bwapi.Order;
 import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
@@ -15,7 +16,6 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	private UnitType toProduce;
 	private TilePosition position;
 	private BuildManager buildManager = null;
-	private final double priorityMultiplier = 100000.0; // multiplier used for commendeering SCVs
 	
 	public BuildingOrder(int minerals, int gas, double priority, Unit producer, UnitType toProduce, TilePosition position) {
 		super(ProductionOrder.BUILDING, minerals, gas, priority);
@@ -59,16 +59,16 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	@Override
 	public boolean execute(){
 		if(!canExecute()){
-			KaonBot.print("Failed to execute " + this);
+			KaonBot.print("Failed to execute " + this, true);
 			return false;
 		}
 
 		if(tempClaim == null){
-			KaonBot.print("No claim for " + this);
+			KaonBot.print("No claim for " + this, true);
 		}
 		
 		BuildManager bm = new BuildManager(tempClaim, this);
-		if(tempClaim.commandeer(bm, this.getPriority() * priorityMultiplier)){
+		if(tempClaim.commandeer(bm, this.getPriority() * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER)){
 			tempClaim.addOnCommandeer(tempClaim.new CommandeerRunnable(bm) {
 				@Override
 				public void run() {
@@ -78,7 +78,7 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			});
 			KaonBot.addTempManager(bm);
 			buildManager = bm;
-			executed = producer.build(toProduce, position);
+			executed = true;
 		}
 		
 		return executed;
@@ -108,7 +108,8 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	
 	private void findNewProducer(){
 		List<Claim> claimList = KaonBot.getAllClaims();
-		tempClaim = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, this.getPriority() * priorityMultiplier, null);
+		tempClaim = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, 
+				this.getPriority() * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER, null);
 		if(tempClaim != null){
 			producer = tempClaim.unit;
 		}
@@ -125,21 +126,25 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			debugColor = KaonUtils.getRandomColor();
 			
 			BuildingPlacer.getInstance().reserve(order.getPosition(), order.toProduce, debugColor);
-			KaonBot.print("Building  " + order + " started with: " + claim.unit.getID());
+			KaonBot.print(" Building " + order + " started with: " + claim.unit.getID());
 		}
 		
 		@Override
 		public void runFrame() {
 			Unit builder = this.getAllClaims().get(0).unit;
-			if(builder.isConstructing()){
+			if(builder.getOrder() == Order.ConstructingBuilding){
 				started = true;
 				order.setSpent();
-			}
-			else{
-				if(started || !builder.exists()){
-					order.setDone();
-					this.setDone();
+			} else if(builder.isConstructing()){
+				//do nothing
+			
+			} else if(started || !builder.exists()) {
+				order.setDone();
+				this.setDone();
+				if(!builder.exists()){
+					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);;
 				}
+			} else {
 				builder.move(order.getPosition().toPosition());
 				order.retry();
 			}

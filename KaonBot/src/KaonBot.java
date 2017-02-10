@@ -10,18 +10,23 @@ import bwapi.Mirror;
 import bwapi.Player;
 import bwapi.Unit;
 import bwta.BWTA;
+import bwta.BaseLocation;
 
 public class KaonBot extends DefaultBWListener {
 
 	public static boolean debug = true;
     public static Mirror mirror = new Mirror();
 
+    public static double SCV_COMMANDEER_BUILDING_MULTIPLIER = 1000.0;
+    
     private static Game game;
 
     private Player self;
     
     private static ArrayList<Manager> managerList = new ArrayList<Manager>();
     private static ArrayList<TempManager> tempManagers = new ArrayList<TempManager>();
+    private static Map<Integer, Unit> discoveredEnemies = new HashMap<Integer, Unit>();
+    private static BaseLocation startPosition;
     private ArrayList<Unit> unclaimedUnits = new ArrayList<Unit>();
     private Map<Integer, Claim> masterClaimList = new HashMap<Integer, Claim>();
     private BuildingPlacer bpInstance;
@@ -32,12 +37,17 @@ public class KaonBot extends DefaultBWListener {
     	return game;
     }
     
-    public static void print(String message){
+    public static void print(String message, boolean error){
     	try {
-			System.out.println(game.getFrameCount() + " " + message);
-		} catch (Exception e) {
+			if(error) System.err.println(game.getFrameCount() + " " + message);
+			else System.out.println(game.getFrameCount() + " " + message);
+} catch (Exception e) {
 			System.err.println("ERROR PRINTING MESSAGE");
 		}
+    }
+    
+    public static void print(String message){
+    	print(message, false);
     }
     
     public static List<Claim> getAllClaims(){
@@ -46,6 +56,14 @@ public class KaonBot extends DefaultBWListener {
     		allClaims.addAll(m.getAllClaims());
     	}
     	return allClaims;
+    }
+    
+    public static Map<Integer, Unit> discoveredEnemies(){
+    	return discoveredEnemies;
+    }
+    
+    public static BaseLocation getStartPosition(){
+    	return startPosition;
     }
     
     public static void addTempManager(TempManager m){
@@ -74,11 +92,15 @@ public class KaonBot extends DefaultBWListener {
 	        BWTA.readMap();
 	        BWTA.analyze();
 
+	        startPosition = BWTA.getStartLocation(self);
+	        
 	        EconomyManager econ = new EconomyManager(1.0, 0.5);
 	        DepotManager depot = new DepotManager(1.0, 0.1, econ, self);
+	        RushManager rush = new RushManager(0.6, 0.01);
 	        
 	        managerList.add(econ);
 	        managerList.add(depot);
+	        managerList.add(rush);
 	        
 	        for(Manager m: managerList){
 	        	m.init(game);
@@ -115,12 +137,15 @@ public class KaonBot extends DefaultBWListener {
     @Override
 	public void onUnitDiscover(Unit unit){
     	try{
-    		//game.printf("onUnitDiscover()");
-	    	if(unit.getType().isBuilding()) bpInstance.reserve(unit);
-	
-			for(Manager manager: managerList){
-				manager.handleNewUnit(unit, unit.getPlayer() == self);
-			}
+    		if(unit.getType().isBuilding()) bpInstance.reserve(unit);
+    		if(discoveredEnemies.put(unit.getID(), unit) == null) {
+	    		//game.printf("onUnitDiscover()");
+		    	if(unit.getType().isBuilding()) bpInstance.reserve(unit);
+		
+				for(Manager manager: managerList){
+					manager.handleNewUnit(unit, unit.getPlayer() == self, unit.getPlayer().isEnemy(self));
+				}
+    		}
     	}catch(Exception e){
     		game.printf("Error in onUnitDiscover(): " + e);
     		e.printStackTrace();
@@ -130,16 +155,23 @@ public class KaonBot extends DefaultBWListener {
     @Override
     public void onUnitDestroy(Unit unit){
     	try{
-    		//game.printf("onUnitDestroy()");
-    		KaonBot.print("Unit Destroyed: " + unit.getType());
-    		Claim toCleanup = masterClaimList.remove(unit.getID());
+    		if(unit.getType().isBuilding()) bpInstance.free(unit);
+
+    		boolean friendly = unit.getPlayer() == self;
+    		if(friendly)
+    		{
+	    		//game.printf("onUnitDestroy()");
+	    		KaonBot.print("Unit Destroyed: " + unit.getType());
+	    		Claim toCleanup = masterClaimList.remove(unit.getID());
     		
-    		if(toCleanup != null){
+    			if(toCleanup != null){
     			// notify the manager the unit has been "commandeered" by the reaper
-    			toCleanup.commandeer(null, Double.MAX_VALUE); 
+    				toCleanup.commandeer(null, Double.MAX_VALUE); 
+    			}
+    		} else {
+    			
     		}
     		
-    		if(unit.getType().isBuilding()) bpInstance.free(unit);
     	}catch(Exception e){
     		game.printf("Error in onUnitDestroy(): " + e);
     		e.printStackTrace();
@@ -155,7 +187,8 @@ public class KaonBot extends DefaultBWListener {
     		game.printf("Error in onFrame(): " + e);
     		e.printStackTrace();
     	}
-    	game.drawTextScreen(0, 0, game.getFrameCount() + "");
+    	game.drawTextScreen(0, 0, "FRAME: " + game.getFrameCount());
+    	game.drawTextScreen(200, 0, "APM: " + game.getAPM());
     }
     
     public void runFrame(){
@@ -188,17 +221,18 @@ public class KaonBot extends DefaultBWListener {
     		manager.runFrame();
     	}
 
+        game.drawTextScreen(400, 10, output.toString());
+
         pQueue.clear();
         for(Manager m: managerList){
         	pQueue.addAll(m.getProductionRequests());
         }
 
         String out = pQueue.processQueue();
-        output.append(out);
+        game.drawTextScreen(10, 10, out);
 
         displayDebugGraphics();
         
-        game.drawTextScreen(10, 10, output.toString());
     }
     
     public void handleUnclaimedUnits(StringBuilder output){

@@ -17,7 +17,8 @@ public class DepotManager extends AbstractManager {
 	Player player;
 	TilePosition nextDepot = null;
 	Map<Integer, Unit> depotList = new HashMap<Integer, Unit>();
-	int frameLock = 0;
+	int frameCount = 0;
+	final int FRAME_LOCK = 50;
 	
 	public DepotManager(double baselinePriority, double volatilityScore, EconomyManager econ, Player player) {
 		super(baselinePriority, volatilityScore);
@@ -30,7 +31,21 @@ public class DepotManager extends AbstractManager {
 	}
 
 	@Override
-	public void handleNewUnit(Unit unit, boolean friendly) {
+	public String getName(){
+		int supply = player.supplyTotal();
+		for(Integer i: depotList.keySet()){
+			if(depotList.get(i).isConstructing()){
+				supply += 8;
+			}
+		}
+		
+		int used = player.supplyUsed();
+
+		return "DEPOTS " + used + "/" + supply;
+	}
+	
+	@Override
+	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy) {
 		if(friendly && unit.getType() == UnitType.Terran_Supply_Depot)
 		{
 			depotList.put(unit.getID(), unit);
@@ -48,12 +63,19 @@ public class DepotManager extends AbstractManager {
 
 	@Override
 	public void runFrame() {
-		if(frameLock > 0){
-			frameLock -= 1;
+		if(frameCount > 0){
+			frameCount -= 1;
 			return;
 		}
 		
-		if(player.supplyTotal() <= player.supplyUsed()){
+		int supply = player.supplyTotal();
+		for(Integer i: depotList.keySet()){
+			if(depotList.get(i).isConstructing()){
+				supply += 8;
+			}
+		}
+
+		if(supply <= player.supplyUsed()){
 			if(player.minerals() > 100){
 				incrementPriority(getVolitility() * player.minerals() / 10, false);
 			}
@@ -61,7 +83,7 @@ public class DepotManager extends AbstractManager {
 		}
 		
 		findNextDepotSpot();
-		frameLock = 100;
+		frameCount = FRAME_LOCK;
 	}
 
 	private double getDepotPriority(){
@@ -74,7 +96,7 @@ public class DepotManager extends AbstractManager {
 		
 		int used = player.supplyUsed();
 
-		double multiplier = 1.0 - ((supply - used) / 8.0);
+		double multiplier = 1.0 - ((supply - used) / 16.0);
 		return this.usePriority(multiplier);
 	}
 	
@@ -95,6 +117,10 @@ public class DepotManager extends AbstractManager {
 		if(nextDepot == null){
 			return toReturn;
 		}
+		for(BuildingOrder o: ProductionQueue.getActiveOrders()){
+			if(o.getUnitType() == UnitType.Terran_Supply_Depot)
+				return toReturn;
+		}
 		
 		toReturn.add(new BuildingOrder(100, 0, getDepotPriority(), null, 
 				UnitType.Terran_Supply_Depot, nextDepot));
@@ -112,8 +138,7 @@ public class DepotManager extends AbstractManager {
 	@Override
 	public void displayDebugGraphics(Game game){
 		if(nextDepot != null){
-			game.drawCircleMap(nextDepot.toPosition(), frameLock, new Color(0, 0, 0));
+			game.drawCircleMap(nextDepot.toPosition(), frameCount, debugColor);
 		}
 	}
-	
 }

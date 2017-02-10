@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.PriorityQueue;
 
 import bwapi.Player;
@@ -9,14 +10,18 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 
 	private static final long serialVersionUID = 2962631698946196631L;
 	private Player player;
-	private ArrayList<ProductionOrder> activeOrders = new ArrayList<ProductionOrder>();
+	private static ArrayList<BuildingOrder> activeOrders = new ArrayList<BuildingOrder>();
 	
 	public ProductionQueue(Player player){
 		this.player = player;
 	}
 	
+	public static List<BuildingOrder> getActiveOrders(){
+		return activeOrders;
+	}
+	
 	public String processQueue(){
-    	StringBuilder output = new StringBuilder("Production Queue:\n");
+    	StringBuilder output = new StringBuilder();
 
 		if(peek() == null){
 			output.append("Empty\n");
@@ -32,7 +37,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 		int gasRes = 0;
 		
 		// remove all finished orders from active orders
-		Iterator<ProductionOrder> it = activeOrders.iterator();
+		Iterator<BuildingOrder> it = activeOrders.iterator();
 		while(it.hasNext()){
 			if(it.next().isDone()){
 				it.remove();
@@ -43,6 +48,8 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 		for(ProductionOrder o: activeOrders){
 			output.append("AO: " + o.toString() + "\n");
 		}
+		
+		output.append("PRODUCTION QUEUE:\n");
 		
 		while(	peek() != null && 
 				peek().getMinerals() <= (min - minRes) && 
@@ -71,13 +78,12 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				// Unit can be executed
 				KaonBot.print("Producing " + toExecute);
 				toExecute.execute();
-				activeOrders.add(toExecute);
 				output.append("_" + toExecute + " - " + minRes + "\n");
 			}
 			else if(toExecute.getType() == ProductionOrder.BUILDING && toExecute.canExecute()){
 				// Building can be executed
 				toExecute.execute();
-				activeOrders.add(toExecute);
+				activeOrders.add((BuildingOrder) toExecute);
 				
 				// If the building hasn't started, we still need to reserve minerals
 				if(!toExecute.isSpent()){

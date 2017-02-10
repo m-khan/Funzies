@@ -23,9 +23,9 @@ public class Claim implements Comparable<Claim>{
 		try {
 			return unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
 		} catch (Exception e) {
-			KaonBot.print(unit + "");
-			KaonBot.print(commander + "");
-			KaonBot.print(onCommandeer + "");
+			KaonBot.print(unit + "", true);
+			KaonBot.print(commander + "", true);
+			KaonBot.print(onCommandeer + "", true);
 		}
 		return "BUGGED CLAIM toString()";
 	}

@@ -27,19 +27,41 @@ public class BuildingPlacer {
 			return;
 		}
 		
-		for(int x = p.getX(); x == p.getX() + building.tileHeight(); x++){
-			for(int y = p.getY(); y == p.getX() + building.tileHeight(); y++){
+		for(int x = p.getX(); x < p.getX() + building.tileWidth(); x++){
+			for(int y = p.getY(); y < p.getY() + building.tileHeight(); y++){
 				if(!reservationMap[x][y]){
 					reservationMap[x][y] = true;
 					reservationColors[x][y] = color;
 				}
 			}
 		}
+	}
+
+	public void free(TilePosition p, UnitType building) {
+		if(!building.isBuilding()){
+			KaonBot.print("WARNING - tried to free and non-unit " + p.getPoint());
+			return;
+		}
+		
+		for(int x = p.getX(); x < p.getX() + building.tileWidth(); x++){
+			for(int y = p.getY(); y < p.getY() + building.tileHeight(); y++){
+				if(!reservationMap[x][y]){
+					reservationMap[x][y] = false;
+					reservationColors[x][y] = null;
+				}
+			}
+		}
 		
 	}
+
 	
 	public void reserve(Unit u){
-		mark(u, true);
+		try {
+			mark(u, true);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public void free(Unit u){
@@ -50,7 +72,7 @@ public class BuildingPlacer {
 		TilePosition tp = u.getTilePosition();
 		for(int i = 0; i < u.getType().tileWidth(); i++){
 			for(int j = 0; j < u.getType().tileHeight(); j++){
-				reservationMap[tp.getX() + i][tp.getY() + j] = true;
+				reservationMap[tp.getX() + i][tp.getY() + j] = false;
 			}
 		}
 	}
@@ -75,7 +97,8 @@ public class BuildingPlacer {
 	
 	public Unit getSuitableBuilder(TilePosition position, double priority, UnitCommander searcher){
 		List<Claim> claimList = KaonBot.getAllClaims();
-		Claim c = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, priority, searcher);
+		Claim c = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, 
+				priority * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER, searcher);
 		if(c != null){
 			return c.unit;
 		}
@@ -106,9 +129,30 @@ public class BuildingPlacer {
 						boolean unitsInWay = false;
 						for (Unit u : game.getAllUnits()) {
 							if (u.getID() == builder.getID()) continue;
-							if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)) unitsInWay = true;
+							if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)){
+								unitsInWay = true;
+								break;
+							}
 						}
-						if (!unitsInWay) {
+						
+						boolean spotIsReserved = false;
+						for(int x = i; x < i + buildingType.tileWidth(); x++){
+							for(int y = j; y < i + buildingType.tileHeight(); y++){
+								try {
+									if(reservationMap[x][y]){
+										spotIsReserved = true;
+										break;
+									}
+								} catch (Exception e) {
+									System.err.println("Out of bounds: " + x + ", " + y);
+								}
+							}
+							if(spotIsReserved){
+								break;
+							}
+						}
+						
+						if (!unitsInWay && !spotIsReserved) {
 							return new TilePosition(i, j);
 						}
 					}
@@ -140,4 +184,5 @@ public class BuildingPlacer {
 			return false;
 		return true;
 	}
+
 }
