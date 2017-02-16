@@ -24,7 +24,7 @@ public class RushManager extends AbstractManager {
 	private final double RAX_WEIGHT = 0.6;
 	TilePosition nextRax = null;
 	int frameCount = 0;
-	final int FRAME_LOCK = 50;
+	final int FRAME_LOCK = 51;
 	private Random r = new Random();
 	
 	public RushManager(double baselinePriority, double volitilityScore) {
@@ -45,12 +45,12 @@ public class RushManager extends AbstractManager {
 
 	@Override
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy) {
-		if(friendly){
-		} else if(enemy){
+		if(enemy){
 			if(unit.getType().isBuilding()){
 				targetList.add(unit);
 				targetPositions.add(unit.getPosition());
 				KaonBot.print(unit.getType() + " added to target list");
+				incrementPriority(getVolitility(), false);
 			}
 		}
 	}
@@ -62,6 +62,19 @@ public class RushManager extends AbstractManager {
 		}
 	}
 
+	@Override
+	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
+		int price = u.getType().mineralPrice() + u.getType().gasPrice();
+		
+		if(enemy){
+			incrementPriority(getVolitility() * price / 1000, false);
+		} else if(friendly){
+			incrementPriority(getVolitility() * price / -1000, false);
+		}
+		
+		
+	}
+	
 	@Override
 	public ArrayList<Double> claimUnits(List<Unit> unitList) {
 		ArrayList<Double> toReturn = new ArrayList<Double>(unitList.size());
@@ -94,8 +107,6 @@ public class RushManager extends AbstractManager {
 			return;
 		}
 		updateNextRax();
-		// TODO make this smarter (like not retarded)
-		incrementPriority(getVolitility() * targetList.size(), false);
 		frameCount = 0;
 	}
 
@@ -150,10 +161,12 @@ public class RushManager extends AbstractManager {
 			Unit u = tIt.next();
 			pIt.next();
 			
-			if(enemies.contains(u.getID())){
+			if(!enemies.contains(u.getID())){
 				tIt.remove();
 				pIt.remove();
 				KaonBot.print(u.getType() + " removed from target list");
+				incrementPriority(-1 * getVolitility(), false);
+
 			}
 		}
 	}
@@ -222,7 +235,10 @@ public class RushManager extends AbstractManager {
 			{
 				return true;
 			}
-			else if(getUnit().getOrder() == Order.AttackMove){
+			else if(getUnit().getOrder() == Order.AttackMove ||
+					getUnit().getOrder() == Order.AttackUnit ||
+					getUnit().getOrder() == Order.AttackTile ||
+					getUnit().getOrder() == Order.AtkMoveEP){
 				microCount = 0;
 				return false;
 			}
@@ -233,4 +249,6 @@ public class RushManager extends AbstractManager {
 			return false;
 		}
 	}
+
+
 }

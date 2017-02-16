@@ -70,9 +70,27 @@ public class BuildingPlacer {
 	
 	private void mark(Unit u, boolean marker){
 		TilePosition tp = u.getTilePosition();
-		for(int i = 0; i < u.getType().tileWidth(); i++){
-			for(int j = 0; j < u.getType().tileHeight(); j++){
-				reservationMap[tp.getX() + i][tp.getY() + j] = false;
+		int x = tp.getX();
+		int y = tp.getY();
+		
+		UnitType type = u.getType();
+		
+		int tileWidth = type.tileWidth();
+		int tileHeight = type.tileHeight();
+		
+		// reserve extra space around resource things
+		if(type.isMineralField() || type == UnitType.Resource_Vespene_Geyser){
+			x -= 2;
+			y -= 2;
+			tileWidth += 4;
+			tileHeight += 4;
+		}
+		
+		for(int i = 0; i < tileWidth; i++){
+			for(int j = 0; j < tileHeight; j++){
+				if(x + i < game.mapWidth() && x + i >= 0 && y + j < game.mapHeight() && y + j >= 0) {
+					reservationMap[x + i][y + j] = marker;
+				}
 			}
 		}
 	}
@@ -88,7 +106,7 @@ public class BuildingPlacer {
 					} else {
 						color = new Color(100, 100, 100);
 					}
-					
+					game.drawTextMap(i * 32,  j * 32, " " + i + "\n " + j);
 					game.drawBoxMap(i * 32, j * 32, i * 32 + 32, j * 32 + 32, color, false);
 				}
 			}
@@ -112,45 +130,49 @@ public class BuildingPlacer {
 		int maxDist = 3;
 		int stopDist = 40;
 		
-		// Refinery, Assimilator, Extractor
-		if (buildingType.isRefinery()) {
-			for (Unit n : game.neutral().getUnits()) {
-				if ((n.getType() == UnitType.Resource_Vespene_Geyser) && 
-						( Math.abs(n.getTilePosition().getX() - aroundTile.getX()) < stopDist ) &&
-						( Math.abs(n.getTilePosition().getY() - aroundTile.getY()) < stopDist )
-						) return n.getTilePosition();
-			}
-		}
+//		// Refinery, Assimilator, Extractor
+//		if (buildingType.isRefinery()) {
+//			for (Unit n : game.neutral().getUnits()) {
+//				if ((n.getType() == UnitType.Resource_Vespene_Geyser) && 
+//						( Math.abs(n.getTilePosition().getX() - aroundTile.getX()) < stopDist ) &&
+//						( Math.abs(n.getTilePosition().getY() - aroundTile.getY()) < stopDist )
+//						) return n.getTilePosition();
+//			}
+//		}
+		
 		while ((maxDist < stopDist) && (ret == null)) {
 			for (int i=aroundTile.getX()-maxDist; i<=aroundTile.getX()+maxDist; i++) {
 				for (int j=aroundTile.getY()-maxDist; j<=aroundTile.getY()+maxDist; j++) {
 					if (game.canBuildHere(new TilePosition(i,j), buildingType, builder, false)) {
 						// units that are blocking the tile
 						boolean unitsInWay = false;
-						for (Unit u : game.getAllUnits()) {
-							if (u.getID() == builder.getID()) continue;
-							if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)){
-								unitsInWay = true;
-								break;
-							}
-						}
+//						for (Unit u : game.getAllUnits()) {
+//							if (u.getID() == builder.getID()) continue;
+//							if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)){
+//								unitsInWay = true;
+//								break;
+//							}
+//						}
+						
+						//System.out.println("Checking " + i + ", " + j);
 						
 						boolean spotIsReserved = false;
-						for(int x = i; x < i + buildingType.tileWidth(); x++){
-							for(int y = j; y < i + buildingType.tileHeight(); y++){
-								try {
+						for(int x = i - 1; x < i + buildingType.tileWidth() + 2; x++){
+							for(int y = j - 1; y < j + buildingType.tileHeight() + 2; y++){
+								//System.out.println(x + ", " + y + ": " + reservationMap[x][y]);
+								if(x < game.mapWidth() && x >= 0 && y < game.mapHeight() && y >= 0) {
 									if(reservationMap[x][y]){
 										spotIsReserved = true;
 										break;
 									}
-								} catch (Exception e) {
-									System.err.println("Out of bounds: " + x + ", " + y);
 								}
 							}
 							if(spotIsReserved){
 								break;
 							}
 						}
+						
+						//System.out.println("Reserved: " + spotIsReserved);
 						
 						if (!unitsInWay && !spotIsReserved) {
 							return new TilePosition(i, j);

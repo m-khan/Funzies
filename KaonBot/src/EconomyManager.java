@@ -16,6 +16,7 @@ public class EconomyManager extends AbstractManager{
 	private final double ENEMY_BASE = 1.0;
 	private final double SCV_MULT = 0.85;
 	private final double EXPO_MULT = 0.5;
+	private final int NUM_BASES_TO_QUEUE = 3;
 	
 	private ArrayList<Base> bases = new ArrayList<Base>();
 	
@@ -62,7 +63,8 @@ public class EconomyManager extends AbstractManager{
 			i++;
 		}
 
-		for(i = 0; i < bases.size(); i++){
+		int queued = 0;
+		for(i = 0; i < bases.size() && queued < NUM_BASES_TO_QUEUE; i++){
 			Base b = bases.get(i);
 			double nScore = expandScores[i];
 			nScore = nScore - lowScore;
@@ -70,6 +72,7 @@ public class EconomyManager extends AbstractManager{
 			if(b.cc == null) {
 				list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), null, 
 						UnitType.Terran_Command_Center, b.location.getTilePosition()));
+				queued++;
 			}
 		}
 		return list;
@@ -320,5 +323,11 @@ public class EconomyManager extends AbstractManager{
 				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}
 		}
+	}
+
+	@Override
+	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
+		// TODO Auto-generated method stub
+		
 	}
 }

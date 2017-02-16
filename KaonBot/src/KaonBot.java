@@ -96,7 +96,7 @@ public class KaonBot extends DefaultBWListener {
 	        
 	        EconomyManager econ = new EconomyManager(1.0, 0.5);
 	        DepotManager depot = new DepotManager(1.0, 0.1, econ, self);
-	        RushManager rush = new RushManager(0.6, 0.01);
+	        RushManager rush = new RushManager(0.8, 0.01);
 	        
 	        managerList.add(econ);
 	        managerList.add(depot);
@@ -137,7 +137,9 @@ public class KaonBot extends DefaultBWListener {
     @Override
 	public void onUnitDiscover(Unit unit){
     	try{
-    		if(unit.getType().isBuilding()) bpInstance.reserve(unit);
+    		if(unit.getType().isBuilding()){
+    			bpInstance.reserve(unit);
+    		}
     		if(discoveredEnemies.put(unit.getID(), unit) == null) {
 	    		//game.printf("onUnitDiscover()");
 		    	if(unit.getType().isBuilding()) bpInstance.reserve(unit);
@@ -158,6 +160,12 @@ public class KaonBot extends DefaultBWListener {
     		if(unit.getType().isBuilding()) bpInstance.free(unit);
 
     		boolean friendly = unit.getPlayer() == self;
+    		boolean enemy = self.isEnemy(unit.getPlayer());
+    		
+    		for(Manager m: managerList){
+    			m.handleUnitDestroy(unit, friendly, enemy);
+    		}
+    		
     		if(friendly)
     		{
 	    		//game.printf("onUnitDestroy()");
@@ -168,8 +176,6 @@ public class KaonBot extends DefaultBWListener {
     			// notify the manager the unit has been "commandeered" by the reaper
     				toCleanup.commandeer(null, Double.MAX_VALUE); 
     			}
-    		} else {
-    			
     		}
     		
     	}catch(Exception e){
@@ -302,7 +308,7 @@ public class KaonBot extends DefaultBWListener {
     public void displayDebugGraphics(){
     	//TODO add flag
     	
-    	bpInstance.drawReservations();
+    	//bpInstance.drawReservations();
     	for(Manager m: managerList){
     		m.displayDebugGraphics(game);
     	}

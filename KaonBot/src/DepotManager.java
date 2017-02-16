@@ -19,6 +19,7 @@ public class DepotManager extends AbstractManager {
 	Map<Integer, Unit> depotList = new HashMap<Integer, Unit>();
 	int frameCount = 0;
 	final int FRAME_LOCK = 50;
+	final int NUM_DEPOTS_TO_QUEUE = 5;
 	
 	public DepotManager(double baselinePriority, double volatilityScore, EconomyManager econ, Player player) {
 		super(baselinePriority, volatilityScore);
@@ -88,12 +89,15 @@ public class DepotManager extends AbstractManager {
 
 	private double getDepotPriority(){
 		int supply = player.supplyTotal();
+		
 		for(Integer i: depotList.keySet()){
 			if(depotList.get(i).isConstructing()){
 				supply += 8;
 			}
 		}
-		
+
+		if(supply >= 400) return 0;
+
 		int used = player.supplyUsed();
 
 		double multiplier = 1.0 - ((supply - used) / 16.0);
@@ -114,16 +118,24 @@ public class DepotManager extends AbstractManager {
 	@Override
 	public List<ProductionOrder> getProductionRequests() {
 		List<ProductionOrder> toReturn = new ArrayList<ProductionOrder>();
+		double depotPriority = getDepotPriority();
+		int depotsToQueue = NUM_DEPOTS_TO_QUEUE;
+		
 		if(nextDepot == null){
 			return toReturn;
 		}
 		for(BuildingOrder o: ProductionQueue.getActiveOrders()){
-			if(o.getUnitType() == UnitType.Terran_Supply_Depot)
-				return toReturn;
+			if(o.getUnitType() == UnitType.Terran_Supply_Depot){
+				depotsToQueue -= 1;
+				depotPriority = depotPriority / 2;
+			}
 		}
 		
-		toReturn.add(new BuildingOrder(100, 0, getDepotPriority(), null, 
-				UnitType.Terran_Supply_Depot, nextDepot));
+		if(depotsToQueue > 0){
+			toReturn.add(new BuildingOrder(100, 0, depotPriority, null, 
+					UnitType.Terran_Supply_Depot, nextDepot));
+		}
+
 		return toReturn;
 	}
 
@@ -140,5 +152,11 @@ public class DepotManager extends AbstractManager {
 		if(nextDepot != null){
 			game.drawCircleMap(nextDepot.toPosition(), frameCount, debugColor);
 		}
+	}
+
+	@Override
+	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
+		// TODO Auto-generated method stub
+		
 	}
 }

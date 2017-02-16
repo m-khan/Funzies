@@ -7,6 +7,7 @@ import bwapi.Unit;
 public interface Manager extends UnitCommander{
 	public void init(Game game);
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy);
+	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy);
 	public void handleCompletedBuilding(Unit unit, boolean friendly);
 	public String getName();
 	public ArrayList<Double> claimUnits(List<Unit> unitList);
