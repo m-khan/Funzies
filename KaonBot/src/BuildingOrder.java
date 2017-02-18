@@ -1,4 +1,5 @@
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
@@ -119,6 +120,7 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 		private BuildingOrder order;
 		private boolean started = false;
 		private Color debugColor;
+		private Unit building = null;
 		
 		private BuildManager(Claim claim, BuildingOrder order){
 			super(claim);
@@ -135,13 +137,22 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			if(builder.getOrder() == Order.ConstructingBuilding){
 				started = true;
 				order.setSpent();
+				if(building == null && builder.getBuildUnit() != null){
+					building = builder.getBuildUnit();
+				}
 			} else if(builder.isConstructing()){
-				//do nothing
-			
-			} else if(started || !builder.exists()) {
-				order.setDone();
-				this.setDone();
+				if(building == null && builder.getBuildUnit() != null){
+					building = builder.getBuildUnit();
+				}
+			} else if(started) {
+				if(!building.isBeingConstructed())
+				{
+					building.cancelConstruction();
+					order.setDone();
+					this.setDone();
+				}
 				if(!builder.exists()){
+					building.cancelConstruction();
 					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);;
 				}
 			} else {
@@ -166,6 +177,15 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			if(builder.isConstructing()){
 				game.drawCircleMap(builder.getPosition(), 10, new Color(255, 0, 0), true);
 			}
+			if(building != null){
+				game.drawCircleMap(building.getPosition(), 10, debugColor);
+			}
+		}
+
+		@Override
+		public ArrayList<Double> claimUnits(List<Unit> unitList) {
+			// TODO Auto-generated method stub
+			return null;
 		}
 	}
 }

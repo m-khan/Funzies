@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.PriorityQueue;
 
 import bwapi.Color;
 import bwapi.Game;
@@ -15,7 +16,9 @@ public class EconomyManager extends AbstractManager{
 	
 	private final double ENEMY_BASE = 1.0;
 	private final double SCV_MULT = 0.85;
-	private final double EXPO_MULT = 0.5;
+	private final double SCV_SURPLUS = 0.2;
+	private final double EXPO_MULT = 0.6;
+	private final double EXPO_SATURATED = .9;
 	private final int NUM_BASES_TO_QUEUE = 3;
 	
 	private ArrayList<Base> bases = new ArrayList<Base>();
@@ -40,18 +43,19 @@ public class EconomyManager extends AbstractManager{
 	}
 	
 	public List<ProductionOrder> getProductionRequests(){
-		ArrayList<ProductionOrder> list = new ArrayList<ProductionOrder>();
+		PriorityQueue<ProductionOrder> list = new PriorityQueue<ProductionOrder>();
 		double[] expandScores = new double[bases.size()];
 		Base init = bases.get(0);
 		double highScore = init.gdFromEnemy - init.gdFromStart;
 		double lowScore = highScore;
 		
+		int totalSCVRequired = 0;
+		
 		// normalize and use all expand scores
 		int i = 0;
 		for(Base b: bases){
-			if(b.cc != null && b.cc.exists()){
-				list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
-			}
+			totalSCVRequired += b.requiredMiners();
+
 			double score = b.gdFromEnemy - b.gdFromStart;
 			expandScores[i] = score;
 			if(score > highScore){
@@ -62,20 +66,38 @@ public class EconomyManager extends AbstractManager{
 			}
 			i++;
 		}
-
-		int queued = 0;
-		for(i = 0; i < bases.size() && queued < NUM_BASES_TO_QUEUE; i++){
+		
+		for(i = 0; i < bases.size(); i++){
 			Base b = bases.get(i);
 			double nScore = expandScores[i];
 			nScore = nScore - lowScore;
 			nScore = nScore / (highScore - lowScore);
 			if(b.cc == null) {
-				list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), null, 
-						UnitType.Terran_Command_Center, b.location.getTilePosition()));
-				queued++;
+				if(totalSCVRequired > 0){
+					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), null, 
+							UnitType.Terran_Command_Center, b.location.getTilePosition()));
+				} else {
+					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_SATURATED * nScore), null, 
+							UnitType.Terran_Command_Center, b.location.getTilePosition()));
+				}
+			} else if(b.cc.exists()){
+				if(totalSCVRequired > 0){
+					list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
+					totalSCVRequired--;
+				} else {
+					list.add(new UnitOrder(50, 0, this.usePriority(SCV_SURPLUS), b.cc, UnitType.Terran_SCV));
+				}
 			}
 		}
-		return list;
+		
+		ArrayList<ProductionOrder> toReturn = new ArrayList<ProductionOrder>();
+		for(int q = 0; q < NUM_BASES_TO_QUEUE; q++){
+			if(list.peek() != null){
+				toReturn.add(list.poll());
+			}
+		}
+		
+		return toReturn;
 	}
 	
 	protected class Base{
@@ -121,13 +143,18 @@ public class EconomyManager extends AbstractManager{
 		}
 
 		protected int requiredMiners(){
-			return mins.size() * 2 - miners.size();
+			if(cc == null || !cc.exists()){
+				return 0;
+			}
+			
+			return mins.size() * 2 + mins.size() / 2 - miners.size();
 		}
 		
 		protected List<Unit> update(){
 			ArrayList<Unit> freeUnits = new ArrayList<Unit>();
 			
-			if(cc == null || !cc.exists()){
+			// check if CC exists
+			if(cc == null || !cc.exists() || mins.size() == 0){
 				cc = null;
 				for(Miner m: miners){
 					if(m.getUnit().exists()){
@@ -138,6 +165,24 @@ public class EconomyManager extends AbstractManager{
 				return freeUnits;
 			}
 			
+			// check all mineral patches
+			Iterator<Unit> it = mins.iterator();
+			while(it.hasNext()){
+				Unit min = it.next();
+				if(min.getResources() < 10){
+					it.remove();
+					incrementPriority(getVolitility(), false);
+
+					//check miners to see if anyone is assigned to this patch
+					for(Miner m: miners){
+						if(m.resource == min){
+							freeUnits.add(m.getUnit());
+						}
+					}
+				}
+			}
+			
+			// run SCV updates, remove if they request
 			ArrayList<Miner> toRemove = new ArrayList<Miner>();
 			for(Miner m : miners){
 				if(m.update()){
@@ -304,7 +349,7 @@ public class EconomyManager extends AbstractManager{
 			}
 			microCount = 0;
 			
-			return !resource.exists() || !getUnit().exists();
+			return resource.getResources() < 10 || !getUnit().exists();
 		}
 	}
 
@@ -319,6 +364,7 @@ public class EconomyManager extends AbstractManager{
 				
 				for(Miner m: b.miners){
 					game.drawLineMap(m.resource.getPosition(), m.getUnit().getPosition(), new Color(100, 100, 200));
+					game.drawTextMap(m.resource.getPosition(), m.resource.getResources() + "/" + m.resource.getInitialResources());
 				}
 				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}

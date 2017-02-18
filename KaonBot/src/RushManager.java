@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
+import bwapi.Color;
 import bwapi.Game;
 import bwapi.Order;
 import bwapi.Position;
@@ -23,18 +24,20 @@ public class RushManager extends AbstractManager {
 	List<Rusher> rushers = new ArrayList<Rusher>();
 	private final double RAX_WEIGHT = 0.6;
 	TilePosition nextRax = null;
+	TilePosition raxBase;
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
 	private Random r = new Random();
 	
 	public RushManager(double baselinePriority, double volitilityScore) {
 		super(baselinePriority, volitilityScore);
-		// TODO Auto-generated constructor stub
+		
+		raxBase = KaonBot.getStartPosition().getTilePosition();
 	}
 
 	@Override
 	public String getName(){
-		return "RUSH " + targetList.size();
+		return "RUSH " + targetList.size() + "|" + rushers.size();
 	}
 	
 	@Override
@@ -114,8 +117,10 @@ public class RushManager extends AbstractManager {
 		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(KaonBot.getStartPosition().getTilePosition(), 
 				getRaxPriority(), this);
 		if(builder != null){
-			nextRax = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, 
-					KaonBot.getStartPosition().getTilePosition());
+			nextRax = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Barracks, raxBase);
+			if(nextRax == null){
+				raxBase = KaonUtils.getRandomBase();
+			}
 		}
 
 	}
@@ -185,6 +190,7 @@ public class RushManager extends AbstractManager {
 				rushers.add(new Rusher(u, targetList.get(0), targetPositions.get(0)));
 			}
 		}
+		newUnits.clear();
 	}
 
 	@Override
@@ -202,6 +208,23 @@ public class RushManager extends AbstractManager {
 		if(nextRax != null){
 			game.drawCircleMap(nextRax.toPosition(), frameCount, debugColor);
 		}
+		
+		for(Rusher r: rushers){
+			String toDraw = r.getUnit().getOrder().toString();
+//			if(r.getUnit().isStartingAttack()){
+//				toDraw += "\nisStartingAttack";
+//			}
+//			if(r.getUnit().isAttackFrame())
+//			{
+//				toDraw += "\nisAttackFrame";
+//			}
+//			if(r.getUnit().isAttacking());
+//			{
+//				toDraw += "\nisAttacking";
+//			}
+			game.drawTextMap(r.getUnit().getPosition(), toDraw);
+			game.drawCircleMap(r.getUnit().getPosition(), r.getUnit().getGroundWeaponCooldown(), new Color(0, 0, 0));
+		}
 	}
 
 	
@@ -209,13 +232,14 @@ public class RushManager extends AbstractManager {
 		
 		Unit target;
 		Position targetPosition;
-		private final int MICRO_LOCK = 50;
+		private final int MICRO_LOCK = 12;
 		private int microCount;
 		
 		public Rusher(Unit unit, Unit target, Position targetPosition) {
 			super(unit);
 			this.target = target;
 			this.targetPosition = targetPosition;
+			microCount = 0;
 		}
 
 		@Override
@@ -224,25 +248,38 @@ public class RushManager extends AbstractManager {
 				microCount++;
 				return false;
 			}
+			
 			if(!getUnit().exists())
 			{
+				KaonBot.print(getUnit().getID() + " released, does not exist.");
 				return true;
 			}
 			if(target != null && target.exists()){
 				targetPosition = target.getPosition();
-			}
-			else if((getUnit().getDistance(targetPosition) < getUnit().getType().sightRange()))
+//				if(getUnit().getType().groundWeapon().maxRange() < getUnit().getDistance(targetPosition)){
+//					KaonBot.print("IN RANGE: " + microCount);
+//					getUnit().attack(target);
+//					microCount = 0;
+//					return false;
+//				}
+			}else if((getUnit().getDistance(targetPosition) < getUnit().getType().sightRange()))
 			{
+				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + microCount);
 				return true;
 			}
-			else if(getUnit().getOrder() == Order.AttackMove ||
+			
+			if(getUnit().getOrder() == Order.AttackMove ||
 					getUnit().getOrder() == Order.AttackUnit ||
 					getUnit().getOrder() == Order.AttackTile ||
 					getUnit().getOrder() == Order.AtkMoveEP){
+				//KaonBot.print("ALREADY ATTACKING: " + microCount);
+
 				microCount = 0;
 				return false;
 			}
+			KaonBot.print(getUnit().getID() + "ATTACKING: " + microCount);
 			
+
 			// TODO: better micro
 			getUnit().attack(targetPosition);
 			microCount = 0;

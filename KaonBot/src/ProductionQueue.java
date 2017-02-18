@@ -11,6 +11,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 	private static final long serialVersionUID = 2962631698946196631L;
 	private Player player;
 	private static ArrayList<BuildingOrder> activeOrders = new ArrayList<BuildingOrder>();
+	private int OUTPUT_LIMIT = 20;
 	
 	public ProductionQueue(Player player){
 		this.player = player;
@@ -22,7 +23,8 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 	
 	public String processQueue(){
     	StringBuilder output = new StringBuilder();
-
+    	int outputLines = 0;
+    	
 		if(peek() == null){
 			output.append("Empty\n");
 			return output.toString();
@@ -44,12 +46,14 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 			}
 		}
 		output.append("ACTIVE ORDRES: " + activeOrders.size() + "\n");
+		outputLines++;
 		
-		for(ProductionOrder o: activeOrders){
-			output.append("AO: " + o.toString() + "\n");
-		}
+//		for(ProductionOrder o: activeOrders){
+//			output.append("AO: " + o.toString() + "\n");
+//		}
 		
 		output.append("PRODUCTION QUEUE:\n");
+		outputLines++;
 		
 		while(	peek() != null && 
 				peek().getMinerals() <= (min - minRes) && 
@@ -67,6 +71,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 			
 			if(isDuplicate){
 				output.append("=" + toExecute + " - " + minRes  + "\n");
+				outputLines++;
 				if(!toExecute.isSpent()){
 					minRes += toExecute.getMinerals();
 					gasRes += toExecute.getGas();
@@ -78,7 +83,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				// Unit can be executed
 				KaonBot.print("Producing " + toExecute);
 				toExecute.execute();
-				output.append("_" + toExecute + " - " + minRes + "\n");
+				if(outputLines++ < OUTPUT_LIMIT) output.append("_" + toExecute + " - " + minRes + "\n");
 			}
 			else if(toExecute.getType() == ProductionOrder.BUILDING && toExecute.canExecute()){
 				// Building can be executed
@@ -90,18 +95,19 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 					minRes += toExecute.getMinerals();
 					gasRes += toExecute.getGas();
 				}
-				output.append("!" + toExecute + " - " + minRes  + "\n");
+				if(outputLines++ < OUTPUT_LIMIT) output.append("!" + toExecute + " - " + minRes  + "\n");
 			} else {
 				// The order is already in progress we need to wait
 				if(!toExecute.isSpent()){
 					minRes += toExecute.getMinerals();
 					gasRes += toExecute.getGas();
 				}
-				output.append("*" + toExecute + " - " + minRes  + "\n");
+				if(outputLines++ < OUTPUT_LIMIT) output.append("*" + toExecute + " - " + minRes  + "\n");
 			}
 		}
-		while(peek() != null){
+		while(peek() != null && outputLines < OUTPUT_LIMIT){
 			output.append(poll() + "\n");
+			outputLines++;
 		}
 		
 		return output.toString();

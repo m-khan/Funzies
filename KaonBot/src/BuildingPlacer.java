@@ -103,11 +103,12 @@ public class BuildingPlacer {
 					Color color;
 					if(reservationColors[i][j] != null){
 						color = reservationColors[i][j];
-					} else {
-						color = new Color(100, 100, 100);
-					}
-					game.drawTextMap(i * 32,  j * 32, " " + i + "\n " + j);
-					game.drawBoxMap(i * 32, j * 32, i * 32 + 32, j * 32 + 32, color, false);
+						game.drawBoxMap(i * 32, j * 32, i * 32 + 32, j * 32 + 32, color, false);
+					} 
+//					else {
+//						color = new Color(100, 100, 100);
+//					}
+					//game.drawTextMap(i * 32,  j * 32, " " + i + "\n " + j);
 				}
 			}
 		}
@@ -128,7 +129,7 @@ public class BuildingPlacer {
 	public TilePosition getBuildTile(Unit builder, UnitType buildingType, TilePosition aroundTile) {
 		TilePosition ret = null;
 		int maxDist = 3;
-		int stopDist = 40;
+		int stopDist = 30;
 		
 //		// Refinery, Assimilator, Extractor
 //		if (buildingType.isRefinery()) {

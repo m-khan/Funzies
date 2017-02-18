@@ -1,9 +1,11 @@
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
 import bwapi.Color;
 import bwapi.Position;
+import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
 
@@ -25,6 +27,20 @@ public class KaonUtils {
 		return closest;
 	}
 
+	public static TilePosition getRandomBase(){
+		List<Unit> allUnits = KaonBot.getGame().getAllUnits();
+		List<Unit> bases = new ArrayList<Unit>();
+		for(Unit u: allUnits){
+			if(u.getType().isResourceDepot()){
+				bases.add(u);
+			}
+		}
+		
+		Random r = new Random();
+		
+		return bases.get(r.nextInt(bases.size())).getTilePosition();
+	}
+	
 	public static Claim getClosestClaim(Position pos, List<Claim> units, UnitType ut, double priority, UnitCommander searcher){
 		Iterator<Claim> it = units.iterator();
 

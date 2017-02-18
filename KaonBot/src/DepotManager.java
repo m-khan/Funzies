@@ -16,6 +16,7 @@ public class DepotManager extends AbstractManager {
 	EconomyManager econ;
 	Player player;
 	TilePosition nextDepot = null;
+	TilePosition depotBase;
 	Map<Integer, Unit> depotList = new HashMap<Integer, Unit>();
 	int frameCount = 0;
 	final int FRAME_LOCK = 50;
@@ -25,6 +26,7 @@ public class DepotManager extends AbstractManager {
 		super(baselinePriority, volatilityScore);
 		this.econ = econ;
 		this.player = player;
+		depotBase = player.getStartLocation();
 	}
 
 	@Override
@@ -71,7 +73,7 @@ public class DepotManager extends AbstractManager {
 		
 		int supply = player.supplyTotal();
 		for(Integer i: depotList.keySet()){
-			if(depotList.get(i).isConstructing()){
+			if(depotList.get(i).isConstructing() && depotList.get(i).getBuildUnit() != null){
 				supply += 8;
 			}
 		}
@@ -108,7 +110,10 @@ public class DepotManager extends AbstractManager {
 		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(player.getStartLocation(), getDepotPriority(), this);
 		if(builder != null){
 			try{
-				nextDepot = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, player.getStartLocation());
+				nextDepot = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, depotBase);
+				if(nextDepot == null){
+					depotBase = KaonUtils.getRandomBase();
+				}
 			}catch(Exception e){
 				e.printStackTrace();
 			}

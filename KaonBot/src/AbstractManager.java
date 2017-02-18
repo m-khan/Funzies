@@ -59,9 +59,9 @@ public abstract class AbstractManager implements Manager{
 		if(multiplier > 1.0)
 			multiplier = 1.0; // Managers cannot request more than their current priority
 		
-		if(baselinePriority > priorityScore){
-			priorityScore = baselinePriority; // Should I keep this?
-		}
+//		if(baselinePriority > priorityScore){
+//			priorityScore = baselinePriority; // Should I keep this?
+//		}
 		
 		return priorityScore * multiplier;
 	}

@@ -94,9 +94,9 @@ public class KaonBot extends DefaultBWListener {
 
 	        startPosition = BWTA.getStartLocation(self);
 	        
-	        EconomyManager econ = new EconomyManager(1.0, 0.5);
-	        DepotManager depot = new DepotManager(1.0, 0.1, econ, self);
-	        RushManager rush = new RushManager(0.8, 0.01);
+	        EconomyManager econ = new EconomyManager(1.0, 2.0);
+	        DepotManager depot = new DepotManager(0.9, 0.5, econ, self);
+	        RushManager rush = new RushManager(0.6, 0.01);
 	        
 	        managerList.add(econ);
 	        managerList.add(depot);
@@ -176,6 +176,9 @@ public class KaonBot extends DefaultBWListener {
     			// notify the manager the unit has been "commandeered" by the reaper
     				toCleanup.commandeer(null, Double.MAX_VALUE); 
     			}
+    		}
+    		else if(enemy){
+    			discoveredEnemies.remove(unit.getID());
     		}
     		
     	}catch(Exception e){
@@ -308,13 +311,16 @@ public class KaonBot extends DefaultBWListener {
     public void displayDebugGraphics(){
     	//TODO add flag
     	
-    	//bpInstance.drawReservations();
+    	bpInstance.drawReservations();
     	for(Manager m: managerList){
     		m.displayDebugGraphics(game);
     	}
     	for(UnitCommander c: tempManagers){
     		c.displayDebugGraphics(game);
     	}
+//    	for(Claim c: getAllClaims()){
+//    		game.drawTextMap(c.unit.getPosition(), c.getCommander().toString());
+//    	}
     }
     
     public static void main(String[] args) {
