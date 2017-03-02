@@ -10,6 +10,7 @@ public class Claim implements Comparable<Claim>{
 	private List<Runnable> onCommandeer = new ArrayList<Runnable>();
 	private int claimFrame;
 	private static final int CLAIM_LOCK = 100;
+	private int lastTouched;
 	
 	public Claim(UnitCommander man, double cl, Unit u)
 	{
@@ -17,17 +18,26 @@ public class Claim implements Comparable<Claim>{
 		priority = cl;
 		unit = u;
 		claimFrame = KaonBot.getGame().getFrameCount();
+		lastTouched = claimFrame;
 	}
 
 	public String toString(){
 		try {
-			return unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
+			return unit.getID() + " " + unit.getType() + " - " + commander.getName() + " - " + onCommandeer.size();
 		} catch (Exception e) {
 			KaonBot.print(unit + "", true);
 			KaonBot.print(commander + "", true);
 			KaonBot.print(onCommandeer + "", true);
 		}
 		return "BUGGED CLAIM toString()";
+	}
+	
+	public void touch(){
+		lastTouched = KaonBot.getGame().getFrameCount();
+	}
+	
+	public int getLastTouched(){
+		return lastTouched;
 	}
 	
 	public void addOnCommandeer(Runnable r){
@@ -60,11 +70,14 @@ public class Claim implements Comparable<Claim>{
 
 		for(Runnable r: onCommandeer){
 			if(r instanceof CommandeerRunnable){
-				((CommandeerRunnable) r).setNewValues(this, newManager);
+				if(!((CommandeerRunnable) r).disabled){
+					((CommandeerRunnable) r).setNewValues(this, newManager);
+					r.run();
+				}
+			} else {
+				r.run();
 			}
-			r.run();
 		}
-		
 		commander = newManager;
 		priority = newClaim;
 		return true;
@@ -91,6 +104,7 @@ public class Claim implements Comparable<Claim>{
 		Claim claim = null;
 		UnitCommander newManager = null;
 		Object arg;
+		private boolean disabled = false;
 		
 		protected void setNewValues(Claim claim, UnitCommander newManager){
 			this.claim = claim;
@@ -101,15 +115,18 @@ public class Claim implements Comparable<Claim>{
 			this.arg = arg;
 		}
 		
-		public CommandeerRunnable()
-		{
+		public CommandeerRunnable(){
 			this(null);
 		}
 
-		public void deleteThis()
-		{
-			
+		public void disable(){
+			disabled = true;
 		}
+		
+		public boolean isDisabled(){
+			return disabled;
+		}
+		
 		@Override
 		public abstract void run();
 	}}

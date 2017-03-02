@@ -23,6 +23,7 @@ public class RushManager extends AbstractManager {
 	List<Position> targetPositions = new ArrayList<Position>();
 	List<Rusher> rushers = new ArrayList<Rusher>();
 	private final double RAX_WEIGHT = 0.6;
+	private final double MARINE_PER_MEDIC = 5;
 	TilePosition nextRax = null;
 	TilePosition raxBase;
 	int frameCount = 0;
@@ -70,12 +71,14 @@ public class RushManager extends AbstractManager {
 		int price = u.getType().mineralPrice() + u.getType().gasPrice();
 		
 		if(enemy){
-			incrementPriority(getVolitility() * price / 1000, false);
+			incrementPriority(getVolitility() * price / 100, false);
 		} else if(friendly){
-			incrementPriority(getVolitility() * price / -1000, false);
+			incrementPriority(getVolitility() * price / -100, false);
+		
+			if(u.getType() == UnitType.Terran_Barracks){
+				raxList.remove(u);
+			}
 		}
-		
-		
 	}
 	
 	@Override
@@ -117,10 +120,7 @@ public class RushManager extends AbstractManager {
 		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(KaonBot.getStartPosition().getTilePosition(), 
 				getRaxPriority(), this);
 		if(builder != null){
-			nextRax = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Barracks, raxBase);
-			if(nextRax == null){
-				raxBase = KaonUtils.getRandomBase();
-			}
+			nextRax = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Barracks, KaonBot.mainPosition.getTilePosition());
 		}
 
 	}
@@ -141,8 +141,15 @@ public class RushManager extends AbstractManager {
 	public List<ProductionOrder> getProductionRequests() {
 		List<ProductionOrder> prodList = new LinkedList<ProductionOrder>();
 		
+		
+		
 		for(Unit rax: raxList){
-			prodList.add(new UnitOrder(50, 0, this.usePriority(), rax, UnitType.Terran_Marine));
+			if(rax.getAddon() != null){
+				prodList.add(new UnitOrder(50, 50, this.usePriority(), rax, UnitType.Terran_Medic));
+			}
+			else{
+				prodList.add(new UnitOrder(50, 0, this.usePriority(), rax, UnitType.Terran_Marine));
+			}
 		}
 
 		// return now if we don't have a barracks location
@@ -180,14 +187,14 @@ public class RushManager extends AbstractManager {
 	public void assignNewUnitBehaviors() {
 		updateTargetList();
 
-		for(Unit u: newUnits){
+		for(Claim c: newUnits){
 			if(targetList.size() == 0){
-				List<BaseLocation> starts = BWTA.getStartLocations();
+				List<BaseLocation> starts = BWTA.getBaseLocations();
 				Position p = starts.get(r.nextInt(starts.size())).getPosition();
-				rushers.add(new Rusher(u, null, p));
+				rushers.add(new Rusher(c, null, p));
 			}
 			else{
-				rushers.add(new Rusher(u, targetList.get(0), targetPositions.get(0)));
+				rushers.add(new Rusher(c, targetList.get(0), targetPositions.get(0)));
 			}
 		}
 		newUnits.clear();
@@ -235,8 +242,8 @@ public class RushManager extends AbstractManager {
 		private final int MICRO_LOCK = 12;
 		private int microCount;
 		
-		public Rusher(Unit unit, Unit target, Position targetPosition) {
-			super(unit);
+		public Rusher(Claim c, Unit target, Position targetPosition) {
+			super(c);
 			this.target = target;
 			this.targetPosition = targetPosition;
 			microCount = 0;
@@ -244,6 +251,7 @@ public class RushManager extends AbstractManager {
 
 		@Override
 		public boolean update() {
+			touchClaim();
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;

@@ -1,6 +1,7 @@
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +14,7 @@ public abstract class AbstractManager implements Manager{
 	private double baselinePriority;
 	private double volitilityScore;
 	protected double DO_NOT_WANT = -1;
-	protected ArrayList<Unit> newUnits = new ArrayList<Unit>();
+	protected LinkedList<Claim> newUnits = new LinkedList<Claim>();
 	protected Map<Integer, Claim> claimList = new HashMap<Integer, Claim>();
 	protected Color debugColor;
 	
@@ -32,7 +33,7 @@ public abstract class AbstractManager implements Manager{
 	@Override
 	public void assignNewUnit(Claim claim){
 		claimList.put(claim.unit.getID(), claim);
-		newUnits.add(claim.unit);
+		newUnits.add(claim);
 		KaonBot.print(getName() + " claiming " + claim.unit.getID() + " " + claim.unit.getType());
 		
 		// This makes sure the claim is removed if the unit is commandeered by another manager
@@ -41,6 +42,7 @@ public abstract class AbstractManager implements Manager{
 			public void run() {
 				KaonBot.print(getName() + " releasing " + claim.unit.getID() + " " + claim.unit.getType());
 				removeClaim(claim);
+				this.disable();
 			}
 		});
 		addCommandeerCleanup(claim);
@@ -59,9 +61,9 @@ public abstract class AbstractManager implements Manager{
 		if(multiplier > 1.0)
 			multiplier = 1.0; // Managers cannot request more than their current priority
 		
-//		if(baselinePriority > priorityScore){
-//			priorityScore = baselinePriority; // Should I keep this?
-//		}
+		if(priorityScore <= 0){
+			return 0.000000001;
+		}
 		
 		return priorityScore * multiplier;
 	}
@@ -87,13 +89,16 @@ public abstract class AbstractManager implements Manager{
 	}
 
 	public abstract class Behavior{
-		private Unit unit;
-		public Behavior(Unit unit){
+		private Claim unit;
+		public Behavior(Claim unit){
 			this.unit = unit;
 		}
 		public abstract boolean update();
 		public Unit getUnit(){
-			return unit;
+			return unit.unit;
+		}
+		public void touchClaim(){
+			unit.touch();
 		}
 	}
 	

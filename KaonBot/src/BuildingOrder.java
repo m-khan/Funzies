@@ -66,23 +66,22 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 
 		if(tempClaim == null){
 			KaonBot.print("No claim for " + this, true);
+			return false;
 		}
 		
-		BuildManager bm = new BuildManager(tempClaim, this);
-		if(tempClaim.commandeer(bm, this.getPriority() * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER)){
-			tempClaim.addOnCommandeer(tempClaim.new CommandeerRunnable(bm) {
-				@Override
-				public void run() {
-					((BuildManager) arg).setDone();
-					setDone();
-				}
-			});
-			KaonBot.addTempManager(bm);
-			buildManager = bm;
-			executed = true;
-		}
+		BuildManager bm = new BuildManager(tempClaim, this, this.getPriority());
+//			tempClaim.addOnCommandeer(tempClaim.new CommandeerRunnable(bm) {
+//				@Override
+//				public void run() {
+//					((BuildManager) arg).setDone();
+//					setDone();
+//				}
+//			});
+		KaonBot.addTempManager(bm);
+		buildManager = bm;
+		executed = true;
 		
-		return executed;
+		return true;
 	}
 	
 	@Override
@@ -121,43 +120,80 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 		private boolean started = false;
 		private Color debugColor;
 		private Unit building = null;
+		private int retryCount = 100;
 		
-		private BuildManager(Claim claim, BuildingOrder order){
+		private BuildManager(Claim claim, BuildingOrder order, double priority){
 			super(claim);
 			this.order = order;
 			debugColor = KaonUtils.getRandomColor();
+			
+			claim.commandeer(this, priority * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER * 2);
+			claim.addOnCommandeer(new Runnable(){
+				@Override
+				public void run() {
+					onCommandeer();
+				}
+			});
 			
 			BuildingPlacer.getInstance().reserve(order.getPosition(), order.toProduce, debugColor);
 			KaonBot.print(" Building " + order + " started with: " + claim.unit.getID());
 		}
 		
+		private void onCommandeer(){
+			order.setDone();
+			this.setDone();
+			if(building != null){
+				building.cancelConstruction();
+			}
+		}
+		
 		@Override
 		public void runFrame() {
-			Unit builder = this.getAllClaims().get(0).unit;
+			Claim claim = this.getAllClaims().get(0);
+			Unit builder = claim.unit;
 			if(builder.getOrder() == Order.ConstructingBuilding){
-				started = true;
+				claim.touch();
 				order.setSpent();
 				if(building == null && builder.getBuildUnit() != null){
+					started = true;
 					building = builder.getBuildUnit();
 				}
 			} else if(builder.isConstructing()){
+				claim.touch();
 				if(building == null && builder.getBuildUnit() != null){
 					building = builder.getBuildUnit();
 				}
 			} else if(started) {
 				if(!building.isBeingConstructed())
 				{
-					building.cancelConstruction();
-					order.setDone();
 					this.setDone();
 				}
 				if(!builder.exists()){
-					building.cancelConstruction();
-					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);;
+					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);
+					this.setDone();
+				}
+			} else if (builder.getPosition().equals(order.getPosition().toPosition())){
+				if(retryCount >= 0){
+					retryCount--;
+				} else {
+					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);
+					this.setDone();
 				}
 			} else {
 				builder.move(order.getPosition().toPosition());
 				order.retry();
+			}
+		}
+		
+		@Override
+		public void setDone(){
+			super.setDone();
+			order.setDone();
+			if(building == null){
+				BuildingPlacer.getInstance().free(order.getPosition(), order.getUnitType());
+			} else if(!building.isCompleted()){
+				building.cancelConstruction();
+				BuildingPlacer.getInstance().free(order.getPosition(), order.getUnitType());
 			}
 		}
 		

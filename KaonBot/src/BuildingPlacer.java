@@ -6,6 +6,8 @@ import bwapi.Position;
 import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
+import bwta.BWTA;
+import bwta.BaseLocation;
 
 
 public class BuildingPlacer {
@@ -51,9 +53,7 @@ public class BuildingPlacer {
 				}
 			}
 		}
-		
 	}
-
 	
 	public void reserve(Unit u){
 		try {
@@ -117,7 +117,7 @@ public class BuildingPlacer {
 	public Unit getSuitableBuilder(TilePosition position, double priority, UnitCommander searcher){
 		List<Claim> claimList = KaonBot.getAllClaims();
 		Claim c = KaonUtils.getClosestClaim(position.toPosition(), claimList, UnitType.Terran_SCV, 
-				priority * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER, searcher);
+				priority * KaonBot.SCV_COMMANDEER_BUILDING_MULTIPLIER / 2, searcher);
 		if(c != null){
 			return c.unit;
 		}
@@ -184,7 +184,10 @@ public class BuildingPlacer {
 			maxDist += 2;
 		}
 		
-		if (ret == null) KaonBot.print("Unable to find suitable build position for " + buildingType.toString());
+		if (ret == null) {
+			KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
+			KaonBot.print("Unable to find suitable build position for " + buildingType.toString());
+		}
 		return ret;
 	}
 	

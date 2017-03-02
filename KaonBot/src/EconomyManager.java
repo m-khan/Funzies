@@ -1,11 +1,13 @@
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 
 import bwapi.Color;
 import bwapi.Game;
 import bwapi.Order;
+import bwapi.Position;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwta.BWTA;
@@ -100,106 +102,6 @@ public class EconomyManager extends AbstractManager{
 		return toReturn;
 	}
 	
-	protected class Base{
-		BaseLocation location;
-		double gdFromStart;
-		double gdFromEnemy;
-		private ArrayList<Unit> mins = new ArrayList<Unit>();
-		private ArrayList<Integer> minerCounts = new ArrayList<Integer>(); 
-		Unit gas;
-		Unit extractor = null;
-		Unit cc = null;
-		boolean active = false;
-		ArrayList<Miner> miners = new ArrayList<Miner>();
-		
-		protected Base(BaseLocation location, BaseLocation start)
-		{
-			this.location = location;
-			gdFromStart = BWTA.getGroundDistance(location.getTilePosition(), start.getTilePosition());
-			
-			List<BaseLocation> baseLocations = BWTA.getStartLocations();
-			double distance = 0;
-			for(BaseLocation bL: baseLocations){
-				if(!bL.getPoint().equals(start.getPoint())) {
-					distance += BWTA.getGroundDistance(bL.getTilePosition(), location.getTilePosition());
-				}
-			}
-			
-			gdFromEnemy = distance / baseLocations.size() - 1;
-		}
-		
-		protected void addMinerals(Unit unit){
-			mins.add(unit);
-			minerCounts.add(0);
-		}
-		
-		protected boolean addMiner(Unit unit){
-			if(mins.size() == 0){
-				return false;
-			}
-			
-			miners.add(new Miner(unit, mins.get((miners.size() + 1) % mins.size()))); //TODO implement mineral lock
-			return true;
-		}
-
-		protected int requiredMiners(){
-			if(cc == null || !cc.exists()){
-				return 0;
-			}
-			
-			return mins.size() * 2 + mins.size() / 2 - miners.size();
-		}
-		
-		protected List<Unit> update(){
-			ArrayList<Unit> freeUnits = new ArrayList<Unit>();
-			
-			// check if CC exists
-			if(cc == null || !cc.exists() || mins.size() == 0){
-				cc = null;
-				for(Miner m: miners){
-					if(m.getUnit().exists()){
-						freeUnits.add(m.getUnit());
-					}
-				}
-				miners.clear();
-				return freeUnits;
-			}
-			
-			// check all mineral patches
-			Iterator<Unit> it = mins.iterator();
-			while(it.hasNext()){
-				Unit min = it.next();
-				if(min.getResources() < 10){
-					it.remove();
-					incrementPriority(getVolitility(), false);
-
-					//check miners to see if anyone is assigned to this patch
-					for(Miner m: miners){
-						if(m.resource == min){
-							freeUnits.add(m.getUnit());
-						}
-					}
-				}
-			}
-			
-			// run SCV updates, remove if they request
-			ArrayList<Miner> toRemove = new ArrayList<Miner>();
-			for(Miner m : miners){
-				if(m.update()){
-					if(m.getUnit().exists()){
-						freeUnits.add(m.getUnit());
-					}
-					else{
-						toRemove.add(m);
-					}
-				}
-			}
-			for(Miner m: toRemove){
-				miners.remove(m);
-			}
-			return freeUnits;
-		}
-	}
 
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy){
 		if(unit.getType().isMineralField()){
@@ -222,8 +124,10 @@ public class EconomyManager extends AbstractManager{
 			if (friendly && unit.isCompleted()){
 				for(Base b: bases){
 					double distance = b.location.getDistance(unit.getPosition());
-					if(distance < 300)
+					if(distance < 300){
 						b.cc = unit;
+						KaonBot.mainPosition = b.location;
+					}
 				}
 			}
 			else if(!friendly){
@@ -237,8 +141,10 @@ public class EconomyManager extends AbstractManager{
 		if(friendly && unit.getType().isResourceDepot()){
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
-				if(distance < 300)
+				if(distance < 300){
 					b.cc = unit;
+					//KaonBot.mainPosition = b.location;
+				}
 			}
 		}
 	}
@@ -248,7 +154,6 @@ public class EconomyManager extends AbstractManager{
 		for(Base b: bases){
 			b.update();
 		}
-		
 	}
 	
 	@Override
@@ -285,42 +190,176 @@ public class EconomyManager extends AbstractManager{
 			@Override
 			public void run() {
 				removeMiner((Claim) arg);
+				this.disable();
 			}
 		});
+	}
+
+	private Base getBaseForNewSCV(Position unitPosition){
+		Base newBase = null;
+		for(Base b: bases){
+			double distance = b.location.getDistance(unitPosition);
+			if(distance < 300 && b.requiredMiners() > 0){
+				newBase = b;
+				break;
+			}
+		}
+		if(newBase == null || newBase.requiredMiners() > 0){
+			// check all bases and see which needs the worker the most
+			int max = -1000000;
+			newBase = null;
+			for(Base b: bases){
+				if(b.cc != null && b.requiredMiners() > max){
+					max = b.requiredMiners();
+					newBase = b;
+				}
+			}
+		}
+		return newBase;
 	}
 	
 	@Override
 	public void assignNewUnitBehaviors() {
-		for(Unit unit: newUnits){
+		for(Claim claim: newUnits){
+			Unit unit = claim.unit;
 			if(unit.exists() && unit.getType().isWorker())
 			{
 				// check close base to see if it needs the worker
-				Base newBase = null;
-				for(Base b: bases){
-					double distance = b.location.getDistance(unit.getPosition());
-					if(distance < 300){
-						newBase = b;
-						break;
-					}
+				Base newBase = getBaseForNewSCV(unit.getPosition());
+				if(newBase != null){
+					newBase.addMiner(claim);
+				} else {
+					Claim c = getClaim(unit.getID());
+					if(c != null) c.free();
 				}
-				if(newBase == null || newBase.requiredMiners() > 0){
-					// check all bases and see which needs the worker the most
-					int max = -1;
-					newBase = null;
-					for(Base b: bases){
-						if(b.cc != null && b.requiredMiners() > max){
-							max = b.requiredMiners();
-							newBase = b;
-						}
-					}
-				}
-				if(newBase != null) newBase.addMiner(unit);
+			} else {
+				Claim c = getClaim(unit.getID());
+				if(c != null) c.free();
 			}
 		}
 		newUnits.clear();
 	}
 
-	private class Miner extends Behavior{
+	protected class Base{
+		BaseLocation location;
+		double gdFromStart;
+		double gdFromEnemy;
+		private ArrayList<Unit> mins = new ArrayList<Unit>();
+		private ArrayList<Integer> minerCounts = new ArrayList<Integer>(); 
+		Unit gas;
+		Unit extractor = null;
+		Unit cc = null;
+		boolean active = false;
+		ArrayList<Miner> miners = new ArrayList<Miner>();
+		
+		protected Base(BaseLocation location, BaseLocation start)
+		{
+			this.location = location;
+			gdFromStart = BWTA.getGroundDistance(location.getTilePosition(), start.getTilePosition());
+			
+			List<BaseLocation> baseLocations = BWTA.getStartLocations();
+			double distance = 0;
+			for(BaseLocation bL: baseLocations){
+				if(!bL.getPoint().equals(start.getPoint())) {
+					distance += BWTA.getGroundDistance(bL.getTilePosition(), location.getTilePosition());
+				}
+			}
+			
+			gdFromEnemy = distance / baseLocations.size() - 1;
+		}
+		
+		protected void addMinerals(Unit unit){
+			mins.add(unit);
+			minerCounts.add(0);
+		}
+		
+		protected boolean addMiner(Claim unit){
+			if(mins.size() == 0){
+				return false;
+			}
+			
+			miners.add(new Miner(unit, mins.get((miners.size() + 1) % mins.size()))); //TODO implement mineral lock
+			return true;
+		}
+
+		protected int requiredMiners(){
+			if(cc == null || !cc.exists()){
+				return 0;
+			}
+			
+			return mins.size() * 2 + mins.size() / 2 - miners.size();
+		}
+		
+		protected List<Unit> update(){
+			LinkedList<Unit> freeUnits = new LinkedList<Unit>();
+			
+			// check if CC exists
+			if(cc == null || !cc.exists()){
+				if(cc != null && location.equals(KaonBot.mainPosition))
+				{
+					KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
+				}
+				cc = null;
+				for(Miner m: miners){
+					if(m.getUnit().exists()){
+						freeUnits.add(m.getUnit());
+					}
+				}
+				miners.clear();
+				return freeUnits;
+			}
+			
+			// check all mineral patches
+			LinkedList<Miner> toRemove = new LinkedList<Miner>();
+			Iterator<Unit> it = mins.iterator();
+			while(it.hasNext()){
+				Unit min = it.next();
+				if(min.getResources() < 10){
+					it.remove();
+					incrementPriority(getVolitility(), false);
+
+					//check miners to see if anyone is assigned to this patch
+					for(Miner m: miners){
+						if(m.resource == min){
+							freeUnits.add(m.getUnit());
+							toRemove.add(m);
+						}
+					}
+				}
+			}
+			
+			// run SCV updates, remove if they request
+			for(Miner m : miners){
+				if(m.update()){
+					if(m.getUnit().exists()){
+						freeUnits.add(m.getUnit());
+						toRemove.add(m);
+					}
+					else{
+						toRemove.add(m);
+					}
+				}
+			}
+			
+			if(requiredMiners() < 0){
+				for(int i = miners.size() - requiredMiners(); i < miners.size(); i++)
+				{
+					freeUnits.add(miners.get(i).getUnit());
+					toRemove.add(miners.get(i));
+				}
+			}
+			
+			for(Miner m: toRemove){
+				miners.remove(m);
+			}
+			for(Unit u: freeUnits){
+				getClaim(u.getID()).free();
+			}
+			return freeUnits;
+		}
+	}
+	
+	protected class Miner extends Behavior{
 
 		private Unit resource;
 		private UnitType resourceType;
@@ -328,7 +367,7 @@ public class EconomyManager extends AbstractManager{
 		private final int MICRO_LOCK = 2; //num frames to skip between micro actions
 		private int microCount = 0; 
 		
-		public Miner(Unit miner, Unit resource){
+		public Miner(Claim miner, Unit resource){
 			super(miner);
 			this.resource = resource;
 			this.resourceType = resource.getType();
@@ -344,12 +383,13 @@ public class EconomyManager extends AbstractManager{
 			if(microCount < MICRO_LOCK || getUnit().getOrder() == Order.MiningMinerals 
 					|| getUnit().isCarryingMinerals() || getUnit().getOrder() == Order.WaitForMinerals)
 			{
+				touchClaim();
 				microCount++;
 				return false;
 			}
 			microCount = 0;
 			
-			return resource.getResources() < 10 || !getUnit().exists();
+			return resource.getResources() < 20 || !getUnit().exists();
 		}
 	}
 
@@ -365,6 +405,7 @@ public class EconomyManager extends AbstractManager{
 				for(Miner m: b.miners){
 					game.drawLineMap(m.resource.getPosition(), m.getUnit().getPosition(), new Color(100, 100, 200));
 					game.drawTextMap(m.resource.getPosition(), m.resource.getResources() + "/" + m.resource.getInitialResources());
+					game.drawTextMap(m.getUnit().getPosition(), m.getUnit().getOrder().toString());
 				}
 				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}

@@ -1,6 +1,7 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -27,10 +28,17 @@ public class KaonBot extends DefaultBWListener {
     private static ArrayList<TempManager> tempManagers = new ArrayList<TempManager>();
     private static Map<Integer, Unit> discoveredEnemies = new HashMap<Integer, Unit>();
     private static BaseLocation startPosition;
+    public static BaseLocation mainPosition;
     private ArrayList<Unit> unclaimedUnits = new ArrayList<Unit>();
     private Map<Integer, Claim> masterClaimList = new HashMap<Integer, Claim>();
-    private BuildingPlacer bpInstance;
-    private ProductionQueue pQueue;
+    public static BuildingPlacer bpInstance;
+    public static ProductionQueue pQueue;
+    public static EconomyManager econManager;
+    public static DepotManager depotManager;
+    public static RushManager rushManager;
+    public static ScoutManager scoutManager;
+    
+    private final int STALE_CLAIM = 500;
 
     public static Game getGame(){
     	// TODO find a better solution
@@ -66,6 +74,10 @@ public class KaonBot extends DefaultBWListener {
     	return startPosition;
     }
     
+    public static BaseLocation getCurrentMainBase(){
+    	return mainPosition;
+    }
+    
     public static void addTempManager(TempManager m){
     	tempManagers.add(m);
     }
@@ -93,14 +105,15 @@ public class KaonBot extends DefaultBWListener {
 	        BWTA.analyze();
 
 	        startPosition = BWTA.getStartLocation(self);
+	        mainPosition = startPosition;
+	        econManager = new EconomyManager(.6, 2.0);
+	        depotManager = new DepotManager(0.5, 0.5, econManager, self);
+	        rushManager = new RushManager(0.6, 0.01);
+	        scoutManager = new ScoutManager(1.1, 0.1);
 	        
-	        EconomyManager econ = new EconomyManager(1.0, 2.0);
-	        DepotManager depot = new DepotManager(0.9, 0.5, econ, self);
-	        RushManager rush = new RushManager(0.6, 0.01);
-	        
-	        managerList.add(econ);
-	        managerList.add(depot);
-	        managerList.add(rush);
+	        managerList.add(econManager);
+	        managerList.add(depotManager);
+	        managerList.add(rushManager);
 	        
 	        for(Manager m: managerList){
 	        	m.init(game);
@@ -174,7 +187,7 @@ public class KaonBot extends DefaultBWListener {
     		
     			if(toCleanup != null){
     			// notify the manager the unit has been "commandeered" by the reaper
-    				toCleanup.commandeer(null, Double.MAX_VALUE); 
+    				toCleanup.commandeer(null, Double.MAX_VALUE);
     			}
     		}
     		else if(enemy){
@@ -247,6 +260,15 @@ public class KaonBot extends DefaultBWListener {
     public void handleUnclaimedUnits(StringBuilder output){
     	// Give the managers a chance to claim new units
     	
+    	Iterator<Map.Entry<Integer, Claim>> it = masterClaimList.entrySet().iterator();
+    	while(it.hasNext()){
+    		Map.Entry<Integer, Claim> pair = (Map.Entry<Integer, Claim>) it.next();
+    		if(game.getFrameCount() - pair.getValue().getLastTouched() > STALE_CLAIM){
+    			it.remove();
+    			pair.getValue().free();
+    		}
+    	}
+    	
     	for(Unit u: self.getUnits()){
     		if(u.exists() && u.isCompleted() &&
     				!masterClaimList.containsKey(u.getID())){
@@ -260,10 +282,10 @@ public class KaonBot extends DefaultBWListener {
 //    	}
     	
     	// Make sure all the units in the claims list exist
-    	Iterator<Unit> it = unclaimedUnits.iterator();
-    	while(it.hasNext()){
-    		if(!it.next().exists()){
-    			it.remove();
+    	Iterator<Unit> iter = unclaimedUnits.iterator();
+    	while(iter.hasNext()){
+    		if(!iter.next().exists()){
+    			iter.remove();
     		}
     	}
     	

@@ -37,7 +37,7 @@ public class KaonUtils {
 		}
 		
 		Random r = new Random();
-		
+		if(bases.size() == 0) return null;
 		return bases.get(r.nextInt(bases.size())).getTilePosition();
 	}
 	

@@ -110,10 +110,7 @@ public class DepotManager extends AbstractManager {
 		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(player.getStartLocation(), getDepotPriority(), this);
 		if(builder != null){
 			try{
-				nextDepot = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, depotBase);
-				if(nextDepot == null){
-					depotBase = KaonUtils.getRandomBase();
-				}
+				nextDepot = BuildingPlacer.getInstance().getBuildTile(builder, UnitType.Terran_Supply_Depot, KaonBot.mainPosition.getTilePosition());
 			}catch(Exception e){
 				e.printStackTrace();
 			}
