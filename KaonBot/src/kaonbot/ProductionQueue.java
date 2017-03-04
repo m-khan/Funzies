@@ -1,6 +1,7 @@
 package kaonbot;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 
@@ -56,6 +57,8 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 		output.append("PRODUCTION QUEUE:\n");
 		outputLines++;
 		
+		List<ProductionOrder> processed = new LinkedList<ProductionOrder>();
+		
 		while(	peek() != null && 
 				peek().getMinerals() <= (min - minRes) && 
 				peek().getGas() <= (gas - gasRes)){
@@ -64,8 +67,13 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 			
 			boolean isDuplicate = false;
 			String currentSig = toExecute.getSignature();
-			for(ProductionOrder activeOrder: activeOrders){
-				if(activeOrder.getSignature().equals(currentSig)){
+			for(ProductionOrder order: activeOrders){
+				if(order.getSignature().equals(currentSig)){
+					isDuplicate = true;
+				}
+			}
+			for(ProductionOrder order: processed){
+				if(order.getSignature().equals(currentSig)){
 					isDuplicate = true;
 				}
 			}
@@ -105,6 +113,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				}
 				if(outputLines++ < OUTPUT_LIMIT) output.append("*" + toExecute + " - " + minRes  + "\n");
 			}
+			processed.add(toExecute);
 		}
 		while(peek() != null && outputLines < OUTPUT_LIMIT){
 			output.append(poll() + "\n");

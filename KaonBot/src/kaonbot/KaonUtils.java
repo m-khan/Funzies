@@ -29,7 +29,7 @@ public class KaonUtils {
 	}
 
 	public static TilePosition getRandomBase(){
-		List<Unit> allUnits = KaonBot.getGame().getAllUnits();
+		List<Unit> allUnits = KaonBot.getAllUnits();
 		List<Unit> bases = new ArrayList<Unit>();
 		for(Unit u: allUnits){
 			if(u.getType().isResourceDepot()){

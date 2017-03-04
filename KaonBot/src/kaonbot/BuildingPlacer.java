@@ -1,19 +1,19 @@
 package kaonbot;
+import java.util.HashMap;
 import java.util.List;
 
 import bwapi.Color;
 import bwapi.Game;
-import bwapi.Position;
 import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
 import bwta.BWTA;
-import bwta.BaseLocation;
 
 
 public class BuildingPlacer {
 
 	private static BuildingPlacer buildingPlacer = new BuildingPlacer();
+	private static HashMap<UnitType, TilePosition> buildCache = new HashMap<UnitType, TilePosition>();
 	private Game game;
 	private boolean[][] reservationMap;
 	private Color[][] reservationColors;
@@ -22,6 +22,10 @@ public class BuildingPlacer {
 		game = KaonBot.mirror.getGame();
 		reservationMap = new boolean[game.mapWidth()][game.mapHeight()];
 		reservationColors = new Color[game.mapWidth()][game.mapHeight()];
+	}
+	
+	public void clearCache(){
+		buildCache.clear();
 	}
 	
 	public void reserve(TilePosition p, UnitType building, Color color){
@@ -126,9 +130,11 @@ public class BuildingPlacer {
 	// Returns a suitable TilePosition to build a given building type near 
 	// specified TilePosition aroundTile, or null if not found. (builder parameter is our worker)
 	public TilePosition getBuildTile(Unit builder, UnitType buildingType, TilePosition aroundTile) {
+		System.err.println("getBuildTile()");
+		
 		TilePosition ret = null;
 		int maxDist = 3;
-		int stopDist = 30;
+		int stopDist = 20;
 		
 //		// Refinery, Assimilator, Extractor
 //		if (buildingType.isRefinery()) {
@@ -139,43 +145,35 @@ public class BuildingPlacer {
 //						) return n.getTilePosition();
 //			}
 //		}
+
+		if(buildCache.containsKey(buildingType) && game.canBuildHere(buildCache.get(buildingType), buildingType, builder, false)){
+			return buildCache.get(buildingType);
+		}
 		
 		while ((maxDist < stopDist) && (ret == null)) {
 			for (int i=aroundTile.getX()-maxDist; i<=aroundTile.getX()+maxDist; i++) {
 				for (int j=aroundTile.getY()-maxDist; j<=aroundTile.getY()+maxDist; j++) {
-					if (game.canBuildHere(new TilePosition(i,j), buildingType, builder, false)) {
-						// units that are blocking the tile
-						boolean unitsInWay = false;
-//						for (Unit u : game.getAllUnits()) {
-//							if (u.getID() == builder.getID()) continue;
-//							if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)){
-//								unitsInWay = true;
-//								break;
-//							}
-//						}
-						
-						//System.out.println("Checking " + i + ", " + j);
-						
-						boolean spotIsReserved = false;
-						for(int x = i - 1; x < i + buildingType.tileWidth() + 2; x++){
-							for(int y = j - 1; y < j + buildingType.tileHeight() + 2; y++){
-								//System.out.println(x + ", " + y + ": " + reservationMap[x][y]);
-								if(x < game.mapWidth() && x >= 0 && y < game.mapHeight() && y >= 0) {
-									if(reservationMap[x][y]){
-										spotIsReserved = true;
-										break;
-									}
+					boolean spotIsReserved = false;
+					for(int x = i - 1; x < i + buildingType.tileWidth() + 2; x++){
+						for(int y = j - 1; y < j + buildingType.tileHeight() + 2; y++){
+							//System.out.println(x + ", " + y + ": " + reservationMap[x][y]);
+							if(x < game.mapWidth() && x >= 0 && y < game.mapHeight() && y >= 0) {
+								if(reservationMap[x][y]){
+									spotIsReserved = true;
+									break;
 								}
 							}
-							if(spotIsReserved){
-								break;
-							}
 						}
-						
-						//System.out.println("Reserved: " + spotIsReserved);
-						
-						if (!unitsInWay && !spotIsReserved) {
-							return new TilePosition(i, j);
+						if(spotIsReserved){
+							break;
+						}
+					}
+					
+					if (game.canBuildHere(new TilePosition(i,j), buildingType, builder, false)) {
+						if (!spotIsReserved) {
+							TilePosition toReturn = new TilePosition(i, j);
+							buildCache.put(buildingType, toReturn);
+							return toReturn;
 						}
 					}
 				}

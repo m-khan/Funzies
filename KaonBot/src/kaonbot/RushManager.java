@@ -110,7 +110,7 @@ public class RushManager extends AbstractManager {
 		int price = u.getType().mineralPrice() + u.getType().gasPrice();
 		
 		if(enemy){
-			incrementPriority(getVolitility() * price / 100, false);
+			incrementPriority(getVolitility() * price / 50, false);
 		} else if(friendly){
 			incrementPriority(getVolitility() * price / -100, false);
 		

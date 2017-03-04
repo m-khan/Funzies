@@ -31,13 +31,13 @@ public class DefenseManager extends AbstractManager {
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
 	final int DEFENSE_RADIUS = 100;
+	final double BUILDING_KILL_MULTIPLIER = 5.0;
 	final double NO_TARGET = -0.1;
 	private Random r = new Random();
 	private int targetListUpdateFrame = 0;
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
 		super(baselinePriority, volitilityScore);
-		
 		raxBase = KaonBot.getStartPosition().getTilePosition();
 	}
 
@@ -86,7 +86,7 @@ public class DefenseManager extends AbstractManager {
 			//defencePoints.add(b.getPosition());
 			List<Chokepoint> newChokes = b.getRegion().getChokepoints();
 			for(Chokepoint choke : newChokes){
-				if(choke.getCenter().getDistance(b.getPosition()) > 300){
+				if(choke.getCenter().getDistance(b.getPosition()) > 500){
 					toAdd.add(b);
 				} else if(!chokes.add(choke)){
 					duplicates.add(choke);
@@ -103,6 +103,10 @@ public class DefenseManager extends AbstractManager {
 			defencePoints.add(b.getPosition());
 		}
 		
+		if(defencePoints.size() == 0){
+			defencePoints.add(KaonBot.mainPosition.getPosition());
+		}
+		
 	}
 	
 	@Override
@@ -114,9 +118,12 @@ public class DefenseManager extends AbstractManager {
 
 	@Override
 	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
-		int price = u.getType().mineralPrice() + u.getType().gasPrice();
+		double price = u.getType().mineralPrice() + u.getType().gasPrice();
 		
 		if(enemy){
+			if(u.getType().isBuilding()){
+				price = price * BUILDING_KILL_MULTIPLIER;
+			}
 			incrementPriority(getVolitility() * price / -100, false);
 		} else if(friendly){
 			if(!claimList.containsKey(u.getID())){
@@ -238,13 +245,13 @@ public class DefenseManager extends AbstractManager {
 //		}
 		targetList.clear();
 		targetPositions.clear();
-		for(Unit u: KaonBot.getGame().getAllUnits()){
-			if(KaonBot.isFriendly(u) && u.getType().isBuilding()){
-				for(Unit e : u.getUnitsInRadius(DEFENSE_RADIUS)){
-					if(KaonBot.isEnemy(e)){
-						targetList.add(e);
-						targetPositions.add(e.getPosition());
-					}
+		// only check 1 unit each frame to cut down on performance hit
+		Unit u = KaonBot.getAllUnits().get(KaonBot.getGame().getFrameCount() % KaonBot.getAllUnits().size());
+		if(KaonBot.isFriendly(u) && u.getType().isBuilding()){
+			for(Unit e : u.getUnitsInRadius(DEFENSE_RADIUS)){
+				if(KaonBot.isEnemy(e)){
+					targetList.add(e);
+					targetPositions.add(e.getPosition());
 				}
 			}
 		}

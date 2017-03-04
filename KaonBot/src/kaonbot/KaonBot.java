@@ -23,6 +23,8 @@ public class KaonBot extends DefaultBWListener {
     
     private static Game game;
 
+    private static List<Unit> allUnits;
+    
     private static Player self;
     
     private static ArrayList<Manager> managerList = new ArrayList<Manager>();
@@ -47,8 +49,16 @@ public class KaonBot extends DefaultBWListener {
     	return game;
     }
     
+    public static List<Unit> getAllUnits(){
+    	return allUnits;
+    }
+    
     public static int getSupply(){
     	return self.supplyUsed(); 
+    }
+    
+    public static void showMessage(String message){
+    	//game.printf(message);
     }
     
     public static boolean isFriendly(Unit u){
@@ -105,7 +115,7 @@ public class KaonBot extends DefaultBWListener {
     public void onStart() {
     	try{
 	        game = mirror.getGame();
-    		//game.printf("onStart()");
+    		//showMessage("onStart()");
 	        game.enableFlag(1);
 	        self = game.self();
 	        pQueue = new ProductionQueue(self);
@@ -123,9 +133,9 @@ public class KaonBot extends DefaultBWListener {
 	        startPosition = BWTA.getStartLocation(self);
 	        mainPosition = startPosition;
 	        econManager = new EconomyManager(r.nextDouble(), r.nextDouble());
-	        depotManager = new DepotManager(1 - r.nextDouble() * 0.5, r.nextDouble(), econManager, self);
-	        rushManager = new RushManager(r.nextDouble() * 0.5, r.nextDouble());
-	        defenseManager = new DefenseManager(r.nextDouble() * 0.5, r.nextDouble());
+	        depotManager = new DepotManager(r.nextDouble(), r.nextDouble(), econManager, self);
+	        rushManager = new RushManager(r.nextDouble(), r.nextDouble());
+	        defenseManager = new DefenseManager(r.nextDouble(), r.nextDouble());
 	        //scoutManager = new ScoutManager(1.1, 0.1);
 	        
 	        managerList.add(econManager);
@@ -144,7 +154,7 @@ public class KaonBot extends DefaultBWListener {
 	        	if(u.getType().isBuilding() || u.getType().isResourceDepot()) bpInstance.reserve(u);
 	        }
     	}catch(Exception e){
-    		game.printf("Error in onStart(): " + e);
+    		showMessage("Error in onStart(): " + e);
     		e.printStackTrace();
     	}
     }
@@ -153,14 +163,14 @@ public class KaonBot extends DefaultBWListener {
     @Override
     public void onUnitComplete(Unit unit) {
     	try{
-//    		game.printf("onUnitComplete()");
+//    		showMessage("onUnitComplete()");
         	if(unit.getPlayer() == self && unit.getType().isBuilding()){
         		for(Manager m: managerList){
         			m.handleCompletedBuilding(unit, unit.getPlayer() == self);
         		}
         	}
     	}catch(Exception e){
-    		game.printf("Error in onUnitComplete(): " + e);
+    		showMessage("Error in onUnitComplete(): " + e);
     		e.printStackTrace();
     	}
     }
@@ -172,7 +182,7 @@ public class KaonBot extends DefaultBWListener {
     			bpInstance.reserve(unit);
     		}
     		if(discoveredEnemies.put(unit.getID(), unit) == null) {
-	    		//game.printf("onUnitDiscover()");
+	    		//showMessage("onUnitDiscover()");
 		    	if(unit.getType().isBuilding()) bpInstance.reserve(unit);
 		
 				for(Manager manager: managerList){
@@ -180,7 +190,7 @@ public class KaonBot extends DefaultBWListener {
 				}
     		}
     	}catch(Exception e){
-    		game.printf("Error in onUnitDiscover(): " + e);
+    		showMessage("Error in onUnitDiscover(): " + e);
     		e.printStackTrace();
     	}
     }
@@ -199,7 +209,7 @@ public class KaonBot extends DefaultBWListener {
     		
     		if(friendly)
     		{
-	    		//game.printf("onUnitDestroy()");
+	    		//showMessage("onUnitDestroy()");
 	    		KaonBot.print("Unit Destroyed: " + unit.getType());
 	    		Claim toCleanup = masterClaimList.remove(unit.getID());
     		
@@ -213,7 +223,7 @@ public class KaonBot extends DefaultBWListener {
     		}
     		
     	}catch(Exception e){
-    		game.printf("Error in onUnitDestroy(): " + e);
+    		showMessage("Error in onUnitDestroy(): " + e);
     		e.printStackTrace();
     	}
     }
@@ -221,10 +231,12 @@ public class KaonBot extends DefaultBWListener {
     @Override
     public void onFrame() {
     	try{
-    		//game.printf("onFrame()");
+    		//showMessage("onFrame()");
+    		allUnits = game.getAllUnits();
+    		
     		runFrame();
     	} catch(Exception e){
-    		game.printf("Error in onFrame(): " + e);
+    		showMessage("Error in onFrame(): " + e);
     		e.printStackTrace();
     	}
     	game.drawTextScreen(0, 0, "FRAME: " + game.getFrameCount());
@@ -271,7 +283,7 @@ public class KaonBot extends DefaultBWListener {
         String out = pQueue.processQueue();
         game.drawTextScreen(10, 10, out);
 
-        displayDebugGraphics();
+        //displayDebugGraphics();
         
     }
     

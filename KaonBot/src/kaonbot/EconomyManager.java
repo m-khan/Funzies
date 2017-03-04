@@ -148,8 +148,7 @@ public class EconomyManager extends AbstractManager{
 						KaonBot.mainPosition = b.location;
 					}
 				}
-			}
-			else if(!friendly){
+			} else if(enemy){
 				incrementPriority(ENEMY_BASE, false);
 			}
 		}
@@ -327,6 +326,7 @@ public class EconomyManager extends AbstractManager{
 				if(cc != null && location.equals(KaonBot.mainPosition))
 				{
 					KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
+					BuildingPlacer.getInstance().clearCache();
 				}
 				cc = null;
 				for(Miner m: miners){

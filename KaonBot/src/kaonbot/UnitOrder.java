@@ -23,7 +23,7 @@ public class UnitOrder extends ProductionOrder implements Comparator<ProductionO
 	}
 	
 	public String getSignature(){
-		return toProduce+""+producer.getPosition();
+		return producer.getPosition().toString();
 	}
 	
 	public int getSupply(){
