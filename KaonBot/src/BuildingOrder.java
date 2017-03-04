@@ -131,12 +131,18 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 			claim.addOnCommandeer(new Runnable(){
 				@Override
 				public void run() {
+					KaonBot.print("Building order " + toString() + " commandeered.");
 					onCommandeer();
 				}
 			});
 			
 			BuildingPlacer.getInstance().reserve(order.getPosition(), order.toProduce, debugColor);
 			KaonBot.print(" Building " + order + " started with: " + claim.unit.getID());
+		}
+		
+		@Override
+		public String toString(){
+			return order.toString() + " built by " + this.getAllClaims().get(0).unit.getID();
 		}
 		
 		private void onCommandeer(){
@@ -149,6 +155,8 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 		
 		@Override
 		public void runFrame() {
+			if(KaonBot.getGame().getFrameCount() % 10 != 0) return;
+			
 			Claim claim = this.getAllClaims().get(0);
 			Unit builder = claim.unit;
 			if(builder.getOrder() == Order.ConstructingBuilding){
@@ -174,12 +182,16 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 				}
 			} else if (builder.getPosition().equals(order.getPosition().toPosition())){
 				if(retryCount >= 0){
+					order.retry();
 					retryCount--;
 				} else {
 					BuildingPlacer.getInstance().free(order.getPosition(), order.toProduce);
 					this.setDone();
 				}
 			} else {
+				if(builder.getPosition().getDistance(order.getPosition().toPosition()) > 20){
+					claim.touch();
+				}
 				builder.move(order.getPosition().toPosition());
 				order.retry();
 			}
@@ -187,14 +199,15 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 		
 		@Override
 		public void setDone(){
-			super.setDone();
-			order.setDone();
+			//System.err.println("BO Done: " + building);
 			if(building == null){
 				BuildingPlacer.getInstance().free(order.getPosition(), order.getUnitType());
 			} else if(!building.isCompleted()){
 				building.cancelConstruction();
 				BuildingPlacer.getInstance().free(order.getPosition(), order.getUnitType());
 			}
+			super.setDone();
+			order.setDone();
 		}
 		
 		@Override

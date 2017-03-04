@@ -1,9 +1,9 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import bwapi.DefaultBWListener;
 import bwapi.Game;
@@ -22,7 +22,7 @@ public class KaonBot extends DefaultBWListener {
     
     private static Game game;
 
-    private Player self;
+    private static Player self;
     
     private static ArrayList<Manager> managerList = new ArrayList<Manager>();
     private static ArrayList<TempManager> tempManagers = new ArrayList<TempManager>();
@@ -36,20 +36,33 @@ public class KaonBot extends DefaultBWListener {
     public static EconomyManager econManager;
     public static DepotManager depotManager;
     public static RushManager rushManager;
+    public static DefenseManager defenseManager;
     public static ScoutManager scoutManager;
     
-    private final int STALE_CLAIM = 500;
+    private final int STALE_CLAIM = 100;
 
     public static Game getGame(){
     	// TODO find a better solution
     	return game;
     }
     
+    public static int getSupply(){
+    	return self.supplyUsed(); 
+    }
+    
+    public static boolean isFriendly(Unit u){
+    	return u.getPlayer() == self;
+    }
+    
+    public static boolean isEnemy(Unit u){
+    	return self.isEnemy(u.getPlayer());
+    }
+    
     public static void print(String message, boolean error){
     	try {
 			if(error) System.err.println(game.getFrameCount() + " " + message);
 			else System.out.println(game.getFrameCount() + " " + message);
-} catch (Exception e) {
+    	} catch (Exception e) {
 			System.err.println("ERROR PRINTING MESSAGE");
 		}
     }
@@ -104,16 +117,20 @@ public class KaonBot extends DefaultBWListener {
 	        BWTA.readMap();
 	        BWTA.analyze();
 
+	        Random r = new Random();
+	        
 	        startPosition = BWTA.getStartLocation(self);
 	        mainPosition = startPosition;
-	        econManager = new EconomyManager(.6, 2.0);
-	        depotManager = new DepotManager(0.5, 0.5, econManager, self);
-	        rushManager = new RushManager(0.6, 0.01);
-	        scoutManager = new ScoutManager(1.1, 0.1);
+	        econManager = new EconomyManager(r.nextDouble(), r.nextDouble());
+	        depotManager = new DepotManager(1 - r.nextDouble() * 0.5, r.nextDouble(), econManager, self);
+	        rushManager = new RushManager(r.nextDouble() * 0.5, r.nextDouble());
+	        defenseManager = new DefenseManager(r.nextDouble() * 0.5, r.nextDouble());
+	        //scoutManager = new ScoutManager(1.1, 0.1);
 	        
 	        managerList.add(econManager);
 	        managerList.add(depotManager);
 	        managerList.add(rushManager);
+	        managerList.add(defenseManager);
 	        
 	        for(Manager m: managerList){
 	        	m.init(game);
@@ -270,7 +287,7 @@ public class KaonBot extends DefaultBWListener {
     	}
     	
     	for(Unit u: self.getUnits()){
-    		if(u.exists() && u.isCompleted() &&
+    		if(u.exists() && u.isCompleted() && !u.getType().isBuilding() &&
     				!masterClaimList.containsKey(u.getID())){
     			unclaimedUnits.add(u);
     		}

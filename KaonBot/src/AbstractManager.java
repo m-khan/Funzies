@@ -79,13 +79,14 @@ public abstract class AbstractManager implements Manager{
 	@Override
 	public double incrementPriority(double priorityChange, boolean log) {
 		priorityScore += priorityChange;
+		if(priorityScore < 0) priorityScore = 0;
 		return priorityScore;
 	}
 
 	@Override
 	public String getStatus() {
-		DecimalFormat df = new DecimalFormat("#.####");
-		return "PRIORITY=" + df.format(priorityScore) + "/" + df.format(baselinePriority) + "\nCLAIMS=" + claimList.size() + "\n";
+		DecimalFormat df = new DecimalFormat("##.####");
+		return "PRIORITY=" + df.format(priorityScore) + "/" + df.format(volitilityScore) + "\nCLAIMS=" + claimList.size() + "\n";
 	}
 
 	public abstract class Behavior{

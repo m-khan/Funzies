@@ -41,16 +41,14 @@ public class BuildingPlacer {
 
 	public void free(TilePosition p, UnitType building) {
 		if(!building.isBuilding()){
-			KaonBot.print("WARNING - tried to free and non-unit " + p.getPoint());
+			KaonBot.print("WARNING - tried to free a non-building unit " + p.getPoint());
 			return;
 		}
 		
 		for(int x = p.getX(); x < p.getX() + building.tileWidth(); x++){
 			for(int y = p.getY(); y < p.getY() + building.tileHeight(); y++){
-				if(!reservationMap[x][y]){
-					reservationMap[x][y] = false;
-					reservationColors[x][y] = null;
-				}
+				reservationMap[x][y] = false;
+				reservationColors[x][y] = null;
 			}
 		}
 	}

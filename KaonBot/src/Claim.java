@@ -9,7 +9,7 @@ public class Claim implements Comparable<Claim>{
 	public final Unit unit;
 	private List<Runnable> onCommandeer = new ArrayList<Runnable>();
 	private int claimFrame;
-	private static final int CLAIM_LOCK = 100;
+	private static final int CLAIM_LOCK = 50;
 	private int lastTouched;
 	
 	public Claim(UnitCommander man, double cl, Unit u)

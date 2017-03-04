@@ -17,11 +17,12 @@ import bwta.BaseLocation;
 public class EconomyManager extends AbstractManager{
 	
 	private final double ENEMY_BASE = 1.0;
-	private final double SCV_MULT = 0.85;
+	private final double SCV_MULT = 1.0;
 	private final double SCV_SURPLUS = 0.2;
-	private final double EXPO_MULT = 0.6;
+	private final double EXPO_MULT = 0.5;
 	private final double EXPO_SATURATED = .9;
 	private final int NUM_BASES_TO_QUEUE = 3;
+	private boolean needNewBase = false;
 	
 	private ArrayList<Base> bases = new ArrayList<Base>();
 	
@@ -44,6 +45,23 @@ public class EconomyManager extends AbstractManager{
 		}
 	}
 	
+	public List<BaseLocation> getBases(){
+		List<BaseLocation> toReturn = new LinkedList<BaseLocation>();
+		for(Base b: bases){
+			if(b.cc != null && b.cc.exists() && b.mins.size() > 0){
+				toReturn.add(b.location);
+			}
+		}
+		return toReturn;
+	}
+	
+	@Override
+	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
+		if(friendly && u.getType().isWorker()){
+			incrementPriority(getVolitility(), false);
+		}
+	}
+
 	public List<ProductionOrder> getProductionRequests(){
 		PriorityQueue<ProductionOrder> list = new PriorityQueue<ProductionOrder>();
 		double[] expandScores = new double[bases.size()];
@@ -214,6 +232,10 @@ public class EconomyManager extends AbstractManager{
 					newBase = b;
 				}
 			}
+			if(max < 0){
+				needNewBase = true;
+			}
+			
 		}
 		return newBase;
 	}
@@ -229,6 +251,7 @@ public class EconomyManager extends AbstractManager{
 				if(newBase != null){
 					newBase.addMiner(claim);
 				} else {
+					needNewBase = true;
 					Claim c = getClaim(unit.getID());
 					if(c != null) c.free();
 				}
@@ -236,6 +259,11 @@ public class EconomyManager extends AbstractManager{
 				Claim c = getClaim(unit.getID());
 				if(c != null) c.free();
 			}
+		}
+		
+		if(KaonBot.getGame().getFrameCount() % 100 == 0 && needNewBase){
+			incrementPriority(getVolitility(), false);
+			needNewBase = false;
 		}
 		newUnits.clear();
 	}
@@ -364,7 +392,7 @@ public class EconomyManager extends AbstractManager{
 		private Unit resource;
 		private UnitType resourceType;
 		private boolean returning = false;
-		private final int MICRO_LOCK = 2; //num frames to skip between micro actions
+		private final int MICRO_LOCK = 10; //num frames to skip between micro actions
 		private int microCount = 0; 
 		
 		public Miner(Claim miner, Unit resource){
@@ -380,13 +408,20 @@ public class EconomyManager extends AbstractManager{
 		
 		@Override
 		public boolean update() {
-			if(microCount < MICRO_LOCK || getUnit().getOrder() == Order.MiningMinerals 
+			if(microCount < MICRO_LOCK)
+			{
+				microCount++;
+				return false;
+			}
+
+			if(getUnit().getOrder() == Order.MiningMinerals 
 					|| getUnit().isCarryingMinerals() || getUnit().getOrder() == Order.WaitForMinerals)
 			{
 				touchClaim();
 				microCount++;
 				return false;
 			}
+
 			microCount = 0;
 			
 			return resource.getResources() < 20 || !getUnit().exists();
@@ -410,11 +445,5 @@ public class EconomyManager extends AbstractManager{
 				if(b.gas != null) game.drawLineMap(b.cc.getPosition(), b.gas.getPosition(), new Color(100, 200, 100));
 			}
 		}
-	}
-
-	@Override
-	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
-		// TODO Auto-generated method stub
-		
 	}
 }
