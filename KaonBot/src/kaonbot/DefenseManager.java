@@ -33,10 +33,14 @@ public class DefenseManager extends AbstractManager {
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
 	final int DEFENSE_RADIUS = 100;
-	final double NO_TARGET = -0.01;
+	final double SUPPLY_CAPPED = -1.0;
+	final double NO_TARGET = -0.001;
 	final double NEW_TARGET = 0.01;
+	final double ENEMY_BASE = -1.0;
+	final double FRIENDLY_BASE = 2.0;
 	private Random r = new Random();
 	private int targetListUpdateFrame = 0;
+	private int targetIndex;
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
 		super(baselinePriority, volitilityScore);
@@ -45,7 +49,7 @@ public class DefenseManager extends AbstractManager {
 
 	@Override
 	public String getName(){
-		return "DEFENSE " + targetList.size() + "|" + rushers.size();
+		return "DEFENSE " + targetList.size() + "|" + rushers.size() + "|" + targetIndex;
 	}
 	
 	@Override
@@ -65,13 +69,14 @@ public class DefenseManager extends AbstractManager {
 					targetList.add(unit);
 					targetPositions.add(unit.getPosition());
 					KaonBot.print(unit.getType() + " added to target list");
-					incrementPriority(getVolitility(), false);
+					incrementPriority(getVolitility() * ENEMY_BASE, false);
 				}
 			}
 		}
 		else if(friendly){
 			if(unit.getType().isResourceDepot()){
 				updateDefencePoints();
+				incrementPriority(getVolitility() * FRIENDLY_BASE, false);
 			}
 		}
 	}
@@ -168,9 +173,16 @@ public class DefenseManager extends AbstractManager {
 			frameCount++;
 			return;
 		}
+		
+		if(KaonBot.getSupply() > 380){
+			incrementPriority(getVolitility() * SUPPLY_CAPPED, false);
+		}
+
 //		if(targetList.size() == 0){
 //			incrementPriority(getVolitility() * NO_TARGET, false);
 //		}
+		
+		targetIndex = r.nextInt(100000);
 		
 		updateNextRax();
 		frameCount = 0;
@@ -228,25 +240,6 @@ public class DefenseManager extends AbstractManager {
 		}
 		targetListUpdateFrame = KaonBot.getGame().getFrameCount();
 		
-//		Set<Integer> enemies = KaonBot.discoveredEnemies().keySet();
-//		
-//		Iterator<Unit> tIt = targetList.iterator();
-//		Iterator<Position> pIt = targetPositions.iterator();
-//		
-//		while(tIt.hasNext() && pIt.hasNext()) {
-//			Unit u = tIt.next();
-//			pIt.next();
-//			
-//			if(!enemies.contains(u.getID())){
-//				tIt.remove();
-//				pIt.remove();
-//				KaonBot.print(u.getType() + " removed from target list");
-//				incrementPriority(-1 * getVolitility(), false);
-//
-//			}
-//		}
-//		targetList.clear();
-//		targetPositions.clear();
 		// only check 1 unit each frame to cut down on performance hit
 		int index = KaonBot.getGame().getFrameCount() % KaonBot.getAllUnits().size();
 		if(index == 0)
@@ -283,11 +276,11 @@ public class DefenseManager extends AbstractManager {
 		
 		for(Claim c: newUnits){
 			if(targetList.size() == 0){
-				Position p = defencePoints.get(r.nextInt(defencePoints.size()));
+				Position p = defencePoints.get(targetIndex % defencePoints.size());
 				rushers.add(new Rusher(c, null, p));
 			}
 			else{
-				int target = r.nextInt(targetList.size());
+				int target = targetIndex % targetList.size();
 				rushers.add(new Rusher(c, targetList.get(target), targetPositions.get(target)));
 			}
 		}

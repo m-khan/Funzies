@@ -171,7 +171,11 @@ public class RushManager extends AbstractManager {
 			frameCount++;
 			return;
 		}
-
+		
+		if(targetList.size() == 0){
+			waitForNRushers = 0;
+		}
+		
 		if(waitingForRushers){
 			if(rushersWaiting.size() > waitForNRushers){
 				waitingForRushers = false;
@@ -179,7 +183,7 @@ public class RushManager extends AbstractManager {
 			} else if(claimList.size() / 2 < waitForNRushers){
 				waitForNRushers = claimList.size() / 2;
 			}
-		} else if(deadRushers > waitForNRushers || targetList.size() == 0){
+		} else if(deadRushers > waitForNRushers){
 			// Attack deemed failure
 			waitingForRushers = true;
 			waitForNRushers = claimList.size() / 2;

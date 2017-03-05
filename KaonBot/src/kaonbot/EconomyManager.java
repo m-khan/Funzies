@@ -60,7 +60,7 @@ public class EconomyManager extends AbstractManager{
 	@Override
 	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
 		if(friendly && u.getType().isWorker()){
-			incrementPriority(getVolitility(), false);
+			//incrementPriority(getVolitility(), false);
 		}
 	}
 
@@ -91,8 +91,13 @@ public class EconomyManager extends AbstractManager{
 			i++;
 		}
 		
+		boolean capped = false;
 		if(totalSCVRequired > SCV_HARDCAP - totalSCVs){
 			totalSCVRequired = SCV_HARDCAP - totalSCVs;
+			if(totalSCVRequired > 0)
+			{
+				capped = true;
+			}
 		}
 		
 		for(i = 0; i < bases.size(); i++){
@@ -112,7 +117,7 @@ public class EconomyManager extends AbstractManager{
 				if(totalSCVRequired > 0){
 					list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
 					totalSCVRequired--;
-				} else {
+				} else if(!capped){
 					list.add(new UnitOrder(50, 0, this.usePriority(SCV_SURPLUS), b.cc, UnitType.Terran_SCV));
 				}
 			}
