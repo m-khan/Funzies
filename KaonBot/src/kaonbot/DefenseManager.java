@@ -33,7 +33,7 @@ public class DefenseManager extends AbstractManager {
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
 	final int DEFENSE_RADIUS = 100;
-	final double NO_TARGET = -0.001;
+	final double NO_TARGET = -0.01;
 	final double NEW_TARGET = 0.01;
 	private Random r = new Random();
 	private int targetListUpdateFrame = 0;

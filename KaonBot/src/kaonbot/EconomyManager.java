@@ -20,7 +20,7 @@ public class EconomyManager extends AbstractManager{
 	private final double ENEMY_BASE = 1.0;
 	private final double SCV_MULT = 1.0;
 	private final double SCV_SURPLUS = 0.2;
-	private final int SCV_HARDCAP = 70;
+	private final int SCV_HARDCAP = 80;
 	private final double EXPO_MULT = 0.5;
 	private final double EXPO_SATURATED = .9;
 	private int NUM_BASES_TO_QUEUE = 3;
@@ -72,11 +72,13 @@ public class EconomyManager extends AbstractManager{
 		double lowScore = highScore;
 		
 		int totalSCVRequired = 0;
+		int totalSCVs = 0;
 		
 		// normalize and use all expand scores
 		int i = 0;
 		for(Base b: bases){
 			totalSCVRequired += b.requiredMiners();
+			totalSCVs += b.miners.size();
 
 			double score = b.gdFromEnemy - b.gdFromStart;
 			expandScores[i] = score;
@@ -89,8 +91,8 @@ public class EconomyManager extends AbstractManager{
 			i++;
 		}
 		
-		if(totalSCVRequired > SCV_HARDCAP){
-			totalSCVRequired = SCV_HARDCAP;
+		if(totalSCVRequired > SCV_HARDCAP - totalSCVs){
+			totalSCVRequired = SCV_HARDCAP - totalSCVs;
 		}
 		
 		for(i = 0; i < bases.size(); i++){

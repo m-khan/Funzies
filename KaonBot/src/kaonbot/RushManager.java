@@ -28,12 +28,14 @@ public class RushManager extends AbstractManager {
 	//private final double MARINE_PER_MEDIC = 5;
 	private final double NEW_ARMY_UNIT = 0.1;
 	final double BUILDING_KILL_MULTIPLIER = 5.0;
+	final double SUPPLY_CAPPED = 2.0;
 	TilePosition nextRax = null;
 	TilePosition raxBase;
 	private Position lastRusherDeath = null;
 	private boolean waitingForRushers = false;
 	private int waitForNRushers = 1;
 	private int deadRushers = 0;
+	private int targetIndex = 0;
 	private Set<Unit> rushersWaiting = new HashSet<Unit>();
 	int frameCount = 0;
 	private boolean justStartLocations = true;
@@ -177,15 +179,16 @@ public class RushManager extends AbstractManager {
 			} else if(claimList.size() / 2 < waitForNRushers){
 				waitForNRushers = claimList.size() / 2;
 			}
-		} else if(deadRushers > waitForNRushers){
+		} else if(deadRushers > waitForNRushers || targetList.size() == 0){
 			// Attack deemed failure
 			waitingForRushers = true;
 			waitForNRushers = claimList.size() / 2;
 			deadRushers = 0;
+			targetIndex = r.nextInt(1000000);
 		}
 
 		if(KaonBot.getSupply() > 380){
-			incrementPriority(getVolitility(), false);
+			incrementPriority(getVolitility() * SUPPLY_CAPPED, false);
 		}
 
 		updateNextRax();
@@ -261,6 +264,10 @@ public class RushManager extends AbstractManager {
 	public void assignNewUnitBehaviors() {
 		updateTargetList();
 
+		if(targetList.size() > 0){
+			justStartLocations = false;
+		}
+		
 		for(Claim c: newUnits){
 			if(targetList.size() == 0){
 				
@@ -274,7 +281,7 @@ public class RushManager extends AbstractManager {
 				rushers.add(new Rusher(c, null, p));
 			}
 			else{
-				rushers.add(new Rusher(c, targetList.get(0), targetPositions.get(0)));
+				rushers.add(new Rusher(c, targetList.get(targetIndex % targetList.size()), targetPositions.get(targetIndex % targetList.size())));
 			}
 		}
 		newUnits.clear();
@@ -348,7 +355,7 @@ public class RushManager extends AbstractManager {
 				return true;
 			}
 			
-			if(!getUnit().exists())
+			if(!getUnit().exists() || getUnit().getOrder() == null)
 			{
 				KaonBot.print(getUnit().getID() + " released, does not exist.");
 				return true;
@@ -356,7 +363,9 @@ public class RushManager extends AbstractManager {
 			
 			// if it's fighting we just let it do it's thing
 			if(	getUnit().getOrder() == Order.AttackUnit) {
-				//addTarget(getUnit().getTarget(), true);
+				if(getUnit().getTarget() != null && getUnit().getTarget().getType().isBuilding()){
+					addTarget(getUnit().getTarget(), true);
+				}
 				touchClaim();
 				microCount = 0;
 				return false;
@@ -372,9 +381,9 @@ public class RushManager extends AbstractManager {
 //				}
 			}else if((getUnit().getDistance(targetPosition) < getUnit().getType().sightRange()))
 			{
-				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + microCount);
+				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + target + ", " + targetPosition);
 				if(target != null){
-					//removeTarget(target);
+					removeTarget(target);
 				}
 				return true;
 			}
