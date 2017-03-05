@@ -34,6 +34,7 @@ public class RushManager extends AbstractManager {
 	private Position lastRusherDeath = null;
 	private boolean waitingForRushers = false;
 	private int waitForNRushers = 1;
+	private int waitTimeout = 1000;
 	private int deadRushers = 0;
 	private int targetIndex = 0;
 	private Set<Unit> rushersWaiting = new HashSet<Unit>();
@@ -50,7 +51,8 @@ public class RushManager extends AbstractManager {
 
 	@Override
 	public String getName(){
-		return "ATTACK " + targetList.size() + "|" + rushers.size() + "|" + waitForNRushers + "|" +waitingForRushers + ":" + rushersWaiting.size();
+		return "ATTACK " + targetList.size() + "|" + rushers.size() + "|" 
+				+ !waitingForRushers + ":" + rushersWaiting.size() + "/" + waitForNRushers;
 	}
 	
 	@Override
@@ -174,6 +176,8 @@ public class RushManager extends AbstractManager {
 		
 		if(targetList.size() == 0){
 			waitForNRushers = 0;
+		} else if(waitingForRushers && KaonBot.getGame().getFrameCount() % waitTimeout == 0){
+			waitForNRushers = waitForNRushers / 2;
 		}
 		
 		if(waitingForRushers){

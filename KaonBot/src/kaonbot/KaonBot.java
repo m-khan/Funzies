@@ -139,6 +139,11 @@ public class KaonBot extends DefaultBWListener {
 	        defenseManager = new DefenseManager(r.nextDouble(), 0.1 + r.nextDouble());
 	        //scoutManager = new ScoutManager(1.1, 0.1);
 	        
+	        game.sendText("ECON: " + econManager.usePriority() + "/" + econManager.getVolitility());
+	        game.sendText("DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
+	        game.sendText("ATTK: " + rushManager.usePriority() + "/" + rushManager.getVolitility());
+	        game.sendText("DEFN: " + defenseManager.usePriority() + "/" + defenseManager.getVolitility());
+	        
 	        managerList.add(econManager);
 	        managerList.add(depotManager);
 	        managerList.add(rushManager);
