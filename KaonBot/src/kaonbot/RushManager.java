@@ -1,5 +1,6 @@
 package kaonbot;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -24,11 +25,18 @@ public class RushManager extends AbstractManager {
 	LinkedList<Position> targetPositions = new LinkedList<Position>();
 	List<Rusher> rushers = new ArrayList<Rusher>();
 	private final double RAX_WEIGHT = 0.6;
-	private final double MARINE_PER_MEDIC = 5;
+	//private final double MARINE_PER_MEDIC = 5;
 	private final double NEW_ARMY_UNIT = 0.1;
+	final double BUILDING_KILL_MULTIPLIER = 5.0;
 	TilePosition nextRax = null;
 	TilePosition raxBase;
+	private Position lastRusherDeath = null;
+	private boolean waitingForRushers = false;
+	private int waitForNRushers = 1;
+	private int deadRushers = 0;
+	private Set<Unit> rushersWaiting = new HashSet<Unit>();
 	int frameCount = 0;
+	private boolean justStartLocations = true;
 	final int FRAME_LOCK = 51;
 	private Random r = new Random();
 	
@@ -40,7 +48,7 @@ public class RushManager extends AbstractManager {
 
 	@Override
 	public String getName(){
-		return "ATTACK " + targetList.size() + "|" + rushers.size();
+		return "ATTACK " + targetList.size() + "|" + rushers.size() + "|" + waitForNRushers + "|" +waitingForRushers + ":" + rushersWaiting.size();
 	}
 	
 	@Override
@@ -107,13 +115,23 @@ public class RushManager extends AbstractManager {
 
 	@Override
 	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
-		int price = u.getType().mineralPrice() + u.getType().gasPrice();
+		double price = u.getType().mineralPrice() + u.getType().gasPrice();
 		
 		if(enemy){
-			incrementPriority(getVolitility() * price / 50, false);
+			if(u.getType().isBuilding()){
+				price = price * BUILDING_KILL_MULTIPLIER;
+				//waitForNRushers = waitForNRushers / 2;
+				deadRushers = 0;
+			}
+			incrementPriority(getVolitility() * price / 100, false);
 		} else if(friendly){
 			incrementPriority(getVolitility() * price / -100, false);
-		
+			
+			if(claimList.containsKey(u.getID())){
+				lastRusherDeath = u.getPosition();
+				if(!waitingForRushers) deadRushers++;
+			}
+			
 			if(u.getType() == UnitType.Terran_Barracks){
 				raxList.remove(u);
 			}
@@ -151,6 +169,21 @@ public class RushManager extends AbstractManager {
 			frameCount++;
 			return;
 		}
+
+		if(waitingForRushers){
+			if(rushersWaiting.size() > waitForNRushers){
+				waitingForRushers = false;
+				rushersWaiting.clear();
+			} else if(claimList.size() / 2 < waitForNRushers){
+				waitForNRushers = claimList.size() / 2;
+			}
+		} else if(deadRushers > waitForNRushers){
+			// Attack deemed failure
+			waitingForRushers = true;
+			waitForNRushers = claimList.size() / 2;
+			deadRushers = 0;
+		}
+
 		if(KaonBot.getSupply() > 380){
 			incrementPriority(getVolitility(), false);
 		}
@@ -230,7 +263,13 @@ public class RushManager extends AbstractManager {
 
 		for(Claim c: newUnits){
 			if(targetList.size() == 0){
-				List<BaseLocation> starts = BWTA.getBaseLocations();
+				
+				List<BaseLocation> starts;
+				if(justStartLocations){
+					starts = BWTA.getStartLocations();
+				} else {
+					starts = BWTA.getBaseLocations();
+				}
 				Position p = starts.get(r.nextInt(starts.size())).getPosition();
 				rushers.add(new Rusher(c, null, p));
 			}
@@ -246,6 +285,7 @@ public class RushManager extends AbstractManager {
 		for (Iterator<Rusher> iterator = rushers.iterator(); iterator.hasNext();) {
 			Rusher r = iterator.next();
 			if(r.getUnit() == claim.unit){
+				rushersWaiting.remove(r.getUnit());
 				iterator.remove();
 			}
 		}
@@ -258,7 +298,7 @@ public class RushManager extends AbstractManager {
 		}
 		
 		for(Rusher r: rushers){
-			String toDraw = r.getUnit().getOrder().toString();
+			String toDraw = toString() + "\n" + r.getUnit().getOrder();
 //			if(r.getUnit().isStartingAttack()){
 //				toDraw += "\nisStartingAttack";
 //			}
@@ -292,6 +332,11 @@ public class RushManager extends AbstractManager {
 			microCount = 0;
 		}
 
+		public void forceAttack(){
+			getUnit().attack(targetPosition);
+			rushersWaiting.remove(getUnit());
+		}
+		
 		@Override
 		public boolean update() {
 			if(microCount < MICRO_LOCK){
@@ -308,6 +353,15 @@ public class RushManager extends AbstractManager {
 				KaonBot.print(getUnit().getID() + " released, does not exist.");
 				return true;
 			}
+			
+			// if it's fighting we just let it do it's thing
+			if(	getUnit().getOrder() == Order.AttackUnit) {
+				//addTarget(getUnit().getTarget(), true);
+				touchClaim();
+				microCount = 0;
+				return false;
+			}
+			
 			if(target != null && target.exists()){
 				targetPosition = target.getPosition();
 //				if(getUnit().getType().groundWeapon().maxRange() < getUnit().getDistance(targetPosition)){
@@ -320,16 +374,24 @@ public class RushManager extends AbstractManager {
 			{
 				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + microCount);
 				if(target != null){
-					removeTarget(target);
+					//removeTarget(target);
 				}
 				return true;
 			}
 			
-			if(	getUnit().getOrder() == Order.AttackUnit) {
-				addTarget(getUnit().getTarget(), true);
-				touchClaim();
-				microCount = 0;
-				return false;
+			if(lastRusherDeath != null && waitingForRushers){
+				if(getUnit().getDistance(lastRusherDeath) < getUnit().getType().sightRange() * 3){
+					if(rushersWaiting.add(getUnit())){
+						getUnit().stop();
+					}
+					touchClaim();
+					microCount = 0;
+					return false;
+				} else {
+					getUnit().attack(lastRusherDeath);
+					microCount = 0;
+					return false;
+				}
 			}
 			
 			if( getUnit().getOrder() == Order.AttackMove){

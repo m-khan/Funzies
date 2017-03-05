@@ -32,7 +32,7 @@ public class KaonUtils {
 		List<Unit> allUnits = KaonBot.getAllUnits();
 		List<Unit> bases = new ArrayList<Unit>();
 		for(Unit u: allUnits){
-			if(u.getType().isResourceDepot()){
+			if(u.getType().isResourceDepot() && KaonBot.isFriendly(u)){
 				bases.add(u);
 			}
 		}

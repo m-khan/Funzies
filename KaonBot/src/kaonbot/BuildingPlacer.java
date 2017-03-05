@@ -130,7 +130,7 @@ public class BuildingPlacer {
 	// Returns a suitable TilePosition to build a given building type near 
 	// specified TilePosition aroundTile, or null if not found. (builder parameter is our worker)
 	public TilePosition getBuildTile(Unit builder, UnitType buildingType, TilePosition aroundTile) {
-		System.err.println("getBuildTile()");
+		//System.err.println("getBuildTile()");
 		
 		TilePosition ret = null;
 		int maxDist = 3;
@@ -182,7 +182,7 @@ public class BuildingPlacer {
 		}
 		
 		if (ret == null) {
-			KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
+			KaonBot.econManager.findNewMainBase();
 			KaonBot.print("Unable to find suitable build position for " + buildingType.toString());
 		}
 		return ret;

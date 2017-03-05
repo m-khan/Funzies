@@ -2,24 +2,27 @@ package kaonbot;
 import java.text.DecimalFormat;
 import java.util.Comparator;
 
+import bwapi.Position;
 import bwapi.Unit;
 import bwapi.UnitType;
 
 public class UnitOrder extends ProductionOrder implements Comparator<ProductionOrder>{
 	
 	private Unit producer;
+	private Position producerPosition;
 	private UnitType toProduce;
 	
 	public UnitOrder(int minerals, int gas, double priority, Unit producer, UnitType toProduce){
 		super(ProductionOrder.UNIT, minerals, gas, priority);
 		this.producer = producer;
+		producerPosition = producer.getPosition();
 		this.toProduce = toProduce;
 		
 	}
 	
 	public String toString(){
 		DecimalFormat df = new DecimalFormat("#.##");
-		return  toProduce + " @ " + producer.getType() + producer.getPosition() + " " + df.format(super.getPriority());
+		return  toProduce + "@" + producerPosition + " " + df.format(super.getPriority());
 	}
 	
 	public String getSignature(){

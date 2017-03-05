@@ -64,7 +64,6 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				peek().getGas() <= (gas - gasRes)){
 			
 			ProductionOrder toExecute = poll();
-			
 			boolean isDuplicate = false;
 			String currentSig = toExecute.getSignature();
 			for(ProductionOrder order: activeOrders){

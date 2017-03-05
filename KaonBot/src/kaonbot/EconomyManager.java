@@ -20,9 +20,10 @@ public class EconomyManager extends AbstractManager{
 	private final double ENEMY_BASE = 1.0;
 	private final double SCV_MULT = 1.0;
 	private final double SCV_SURPLUS = 0.2;
+	private final int SCV_HARDCAP = 70;
 	private final double EXPO_MULT = 0.5;
 	private final double EXPO_SATURATED = .9;
-	private final int NUM_BASES_TO_QUEUE = 3;
+	private int NUM_BASES_TO_QUEUE = 3;
 	private boolean needNewBase = false;
 	
 	private ArrayList<Base> bases = new ArrayList<Base>();
@@ -88,6 +89,10 @@ public class EconomyManager extends AbstractManager{
 			i++;
 		}
 		
+		if(totalSCVRequired > SCV_HARDCAP){
+			totalSCVRequired = SCV_HARDCAP;
+		}
+		
 		for(i = 0; i < bases.size(); i++){
 			Base b = bases.get(i);
 			double nScore = expandScores[i];
@@ -112,7 +117,8 @@ public class EconomyManager extends AbstractManager{
 		}
 		
 		ArrayList<ProductionOrder> toReturn = new ArrayList<ProductionOrder>();
-		for(int q = 0; q < NUM_BASES_TO_QUEUE; q++){
+		int numBases = getBases().size();
+		for(int q = 0; q < NUM_BASES_TO_QUEUE + numBases; q++){
 			if(list.peek() != null){
 				toReturn.add(list.poll());
 			}
@@ -152,6 +158,11 @@ public class EconomyManager extends AbstractManager{
 				incrementPriority(ENEMY_BASE, false);
 			}
 		}
+	}
+	
+	public void findNewMainBase(){
+		KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
+		BuildingPlacer.getInstance().clearCache();
 	}
 
 	@Override
@@ -325,8 +336,7 @@ public class EconomyManager extends AbstractManager{
 			if(cc == null || !cc.exists()){
 				if(cc != null && location.equals(KaonBot.mainPosition))
 				{
-					KaonBot.mainPosition = BWTA.getNearestBaseLocation(KaonUtils.getRandomBase());
-					BuildingPlacer.getInstance().clearCache();
+					findNewMainBase();
 				}
 				cc = null;
 				for(Miner m: miners){

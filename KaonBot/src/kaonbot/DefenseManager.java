@@ -21,6 +21,8 @@ import bwta.Chokepoint;
 public class DefenseManager extends AbstractManager {
 
 	List<Unit> raxList = new ArrayList<Unit>();
+	List<Unit> newTargetList = new ArrayList<Unit>();
+	List<Position> newTargetPositions = new ArrayList<Position>();
 	List<Unit> targetList = new ArrayList<Unit>();
 	List<Position> targetPositions = new ArrayList<Position>();
 	List<Position> defencePoints = new ArrayList<Position>(); 
@@ -31,8 +33,8 @@ public class DefenseManager extends AbstractManager {
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
 	final int DEFENSE_RADIUS = 100;
-	final double BUILDING_KILL_MULTIPLIER = 5.0;
-	final double NO_TARGET = -0.1;
+	final double NO_TARGET = -0.001;
+	final double NEW_TARGET = 0.01;
 	private Random r = new Random();
 	private int targetListUpdateFrame = 0;
 	
@@ -54,7 +56,8 @@ public class DefenseManager extends AbstractManager {
 
 	@Override
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy) {
-		if(enemy){
+		// TODO detection!
+		if(enemy && !unit.isCloaked()){
 			List<BaseLocation> bases = KaonBot.econManager.getBases();
 			
 			for(BaseLocation b: bases){
@@ -113,6 +116,8 @@ public class DefenseManager extends AbstractManager {
 	public void handleCompletedBuilding(Unit unit, boolean friendly) {
 		if(friendly && unit.getType() == UnitType.Terran_Barracks){
 			raxList.add(unit);
+		} else if(friendly && unit.getType().isResourceDepot()){
+			incrementPriority(getVolitility(), false);
 		}
 	}
 
@@ -121,9 +126,6 @@ public class DefenseManager extends AbstractManager {
 		double price = u.getType().mineralPrice() + u.getType().gasPrice();
 		
 		if(enemy){
-			if(u.getType().isBuilding()){
-				price = price * BUILDING_KILL_MULTIPLIER;
-			}
 			incrementPriority(getVolitility() * price / -100, false);
 		} else if(friendly){
 			if(!claimList.containsKey(u.getID())){
@@ -243,15 +245,30 @@ public class DefenseManager extends AbstractManager {
 //
 //			}
 //		}
-		targetList.clear();
-		targetPositions.clear();
+//		targetList.clear();
+//		targetPositions.clear();
 		// only check 1 unit each frame to cut down on performance hit
-		Unit u = KaonBot.getAllUnits().get(KaonBot.getGame().getFrameCount() % KaonBot.getAllUnits().size());
+		int index = KaonBot.getGame().getFrameCount() % KaonBot.getAllUnits().size();
+		if(index == 0)
+		{
+			if(newTargetList.size() == 0){
+				incrementPriority(getVolitility() * NO_TARGET * KaonBot.getAllClaims().size(), false);
+			}
+			
+			targetList.clear();
+			targetPositions.clear();
+			targetList.addAll(newTargetList);
+			targetPositions.addAll(newTargetPositions);
+			newTargetList.clear();
+			newTargetPositions.clear();
+		}
+		Unit u = KaonBot.getAllUnits().get(index);
 		if(KaonBot.isFriendly(u) && u.getType().isBuilding()){
 			for(Unit e : u.getUnitsInRadius(DEFENSE_RADIUS)){
-				if(KaonBot.isEnemy(e)){
-					targetList.add(e);
-					targetPositions.add(e.getPosition());
+				if(KaonBot.isEnemy(e) && !e.isCloaked()){
+					incrementPriority(getVolitility() * NEW_TARGET, false);
+					newTargetList.add(e);
+					newTargetPositions.add(e.getPosition());
 				}
 			}
 		}
@@ -343,8 +360,15 @@ public class DefenseManager extends AbstractManager {
 			}else if((getUnit().getDistance(targetPosition) < getUnit().getType().sightRange()))
 			{
 				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + microCount);
-				getUnit().stop();
-				incrementPriority(getVolitility() * NO_TARGET, false);
+				if(getUnit().getOrder() == Order.AttackMove){
+					getUnit().stop();
+				}
+				
+				if(target == null && targetList.size() == 0){
+					//touchClaim();
+					microCount = 0;
+					return false;
+				}
 				return true;
 			}
 			

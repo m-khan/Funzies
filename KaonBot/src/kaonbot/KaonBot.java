@@ -11,6 +11,7 @@ import bwapi.Game;
 import bwapi.Mirror;
 import bwapi.Player;
 import bwapi.Unit;
+import bwapi.UnitType;
 import bwta.BWTA;
 import bwta.BaseLocation;
 
@@ -132,10 +133,10 @@ public class KaonBot extends DefaultBWListener {
 	        
 	        startPosition = BWTA.getStartLocation(self);
 	        mainPosition = startPosition;
-	        econManager = new EconomyManager(r.nextDouble(), r.nextDouble());
-	        depotManager = new DepotManager(r.nextDouble(), r.nextDouble(), econManager, self);
-	        rushManager = new RushManager(r.nextDouble(), r.nextDouble());
-	        defenseManager = new DefenseManager(r.nextDouble(), r.nextDouble());
+	        econManager = new EconomyManager(1 - r.nextDouble() * 0.5, 0.1 + r.nextDouble());
+	        depotManager = new DepotManager(1 - r.nextDouble() * 0.5, 0.1 + r.nextDouble(), econManager, self);
+	        rushManager = new RushManager(r.nextDouble(), 0.1 + r.nextDouble());
+	        defenseManager = new DefenseManager(r.nextDouble(), 0.1 + r.nextDouble());
 	        //scoutManager = new ScoutManager(1.1, 0.1);
 	        
 	        managerList.add(econManager);
@@ -198,11 +199,14 @@ public class KaonBot extends DefaultBWListener {
     @Override
     public void onUnitDestroy(Unit unit){
     	try{
-    		if(unit.getType().isBuilding()) bpInstance.free(unit);
+    		UnitType type = unit.getType();
+    		
+    		if(type.isBuilding()) bpInstance.free(unit);
 
     		boolean friendly = unit.getPlayer() == self;
     		boolean enemy = self.isEnemy(unit.getPlayer());
     		
+    		// DO THIS BEFORE CLAIMS ARE REMOVED
     		for(Manager m: managerList){
     			m.handleUnitDestroy(unit, friendly, enemy);
     		}
@@ -210,13 +214,18 @@ public class KaonBot extends DefaultBWListener {
     		if(friendly)
     		{
 	    		//showMessage("onUnitDestroy()");
-	    		KaonBot.print("Unit Destroyed: " + unit.getType());
+	    		KaonBot.print("Unit Destroyed: " + type);
 	    		Claim toCleanup = masterClaimList.remove(unit.getID());
     		
     			if(toCleanup != null){
     			// notify the manager the unit has been "commandeered" by the reaper
     				toCleanup.commandeer(null, Double.MAX_VALUE);
     			}
+    			
+    			if(type.isBuilding()){
+    				econManager.findNewMainBase();
+    			}
+    			
     		}
     		else if(enemy){
     			discoveredEnemies.remove(unit.getID());
