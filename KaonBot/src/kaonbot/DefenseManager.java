@@ -94,7 +94,7 @@ public class DefenseManager extends AbstractManager {
 			//defencePoints.add(b.getPosition());
 			List<Chokepoint> newChokes = b.getRegion().getChokepoints();
 			for(Chokepoint choke : newChokes){
-				if(choke.getCenter().getDistance(b.getPosition()) > 500){
+				if(choke.getCenter().getDistance(b.getPosition()) > 1000){
 					toAdd.add(b);
 				} else if(!chokes.add(choke)){
 					duplicates.add(choke);
@@ -328,11 +328,17 @@ public class DefenseManager extends AbstractManager {
 
 		@Override
 		public boolean update() {
+			//KaonBot.getGame().drawLineMap(getUnit().getPosition(), targetPosition, new Color(0, 0, 255));
+
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;
 			}
 			
+			if(!claimList.containsKey(getUnit().getID())){
+				return true;
+			}
+
 			if(getUnit().isStuck()){
 				return true;
 			}
@@ -375,7 +381,7 @@ public class DefenseManager extends AbstractManager {
 				microCount = 0;
 				return false;
 			}
-
+			
 			// TODO: better micro
 			getUnit().attack(targetPosition);
 			microCount = 0;

@@ -354,9 +354,14 @@ public class RushManager extends AbstractManager {
 		
 		@Override
 		public boolean update() {
+			//KaonBot.getGame().drawLineMap(getUnit().getPosition(), targetPosition, new Color(255, 0, 0));
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;
+			}
+			
+			if(!claimList.containsKey(getUnit().getID())){
+				return true;
 			}
 			
 			if(getUnit().isStuck()){
