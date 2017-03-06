@@ -47,7 +47,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				it.remove();
 			}
 		}
-		output.append("ACTIVE ORDRES: " + activeOrders.size() + "\n");
+		output.append("ACTIVE ORDERS: " + activeOrders.size() + "\n");
 		outputLines++;
 		
 //		for(ProductionOrder o: activeOrders){

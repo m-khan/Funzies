@@ -42,6 +42,7 @@ public class DefenseManager extends AbstractManager {
 	private Random r = new Random();
 	private int targetListUpdateFrame = 0;
 	private int targetIndex;
+	private int emergencyDefenderCount = 0;
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
 		super(baselinePriority, volitilityScore);
@@ -56,7 +57,6 @@ public class DefenseManager extends AbstractManager {
 	@Override
 	public void init(Game game) {
 		// TODO Auto-generated method stub
-
 	}
 
 	@Override
@@ -144,7 +144,7 @@ public class DefenseManager extends AbstractManager {
 	}
 	
 	public boolean needEmergencyDefenders(int extraClaims){
-		return targetList.size() > claimList.size() + extraClaims;
+		return targetList.size() > claimList.size() + extraClaims - emergencyDefenderCount;
 	}
 	
 	public boolean needEmergencyDefenders(){
@@ -155,7 +155,7 @@ public class DefenseManager extends AbstractManager {
 	public ArrayList<Double> claimUnits(List<Unit> unitList) {
 		ArrayList<Double> toReturn = new ArrayList<Double>(unitList.size());
 		
-		int workerClaims = 0;
+		int workerClaims = emergencyDefenderCount;
 		
 		for(Unit unit: unitList){
 			UnitType type = unit.getType();
@@ -163,7 +163,7 @@ public class DefenseManager extends AbstractManager {
 				toReturn.add(usePriority());
 			}else if(type.isWorker() && needEmergencyDefenders(workerClaims)) {
 				workerClaims++;
-				toReturn.add(usePriority());
+				toReturn.add(usePriority() * 10);
 			}else {
 				toReturn.add(DO_NOT_WANT);
 			}
@@ -286,6 +286,10 @@ public class DefenseManager extends AbstractManager {
 		updateTargetList();
 		
 		for(Claim c: newUnits){
+			if(c.unit.getType().isWorker()){
+				emergencyDefenderCount++;
+			}
+			
 			if(targetList.size() == 0){
 				Position p = defencePoints.get(targetIndex % defencePoints.size());
 				rushers.add(new Rusher(c, null, p));
@@ -300,6 +304,10 @@ public class DefenseManager extends AbstractManager {
 
 	@Override
 	protected void addCommandeerCleanup(Claim claim) {
+		if(claim.unit.getType().isWorker()){
+			emergencyDefenderCount--;
+		}
+
 		for (Iterator<Rusher> iterator = rushers.iterator(); iterator.hasNext();) {
 			Rusher r = iterator.next();
 			if(r.getUnit() == claim.unit){
@@ -344,6 +352,11 @@ public class DefenseManager extends AbstractManager {
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;
+			}
+			
+			if(needEmergencyDefenders()){
+				//make sure we hold onto emergency claims until they're not needed
+				touchClaim();
 			}
 			
 			if(!claimList.containsKey(getUnit().getID())){

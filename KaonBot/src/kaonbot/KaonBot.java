@@ -128,7 +128,7 @@ public class KaonBot extends DefaultBWListener {
 	        pQueue = new ProductionQueue(self);
 	        bpInstance = BuildingPlacer.getInstance();
 	
-	        game.setLocalSpeed(15);
+	        //game.setLocalSpeed(0);
 	        
 	        //Use BWTA to analyze map
 	        //This may take a few minutes if the map is processed first time!
@@ -145,10 +145,10 @@ public class KaonBot extends DefaultBWListener {
 	        defenseManager = new DefenseManager(r.nextDouble(), 0.1 + r.nextDouble());
 	        //scoutManager = new ScoutManager(1.1, 0.1);
 	        
-	        game.sendText("ECON: " + econManager.usePriority() + "/" + econManager.getVolitility());
-	        game.sendText("DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
-	        game.sendText("ATTK: " + rushManager.usePriority() + "/" + rushManager.getVolitility());
-	        game.sendText("DEFN: " + defenseManager.usePriority() + "/" + defenseManager.getVolitility());
+	        game.sendTextEx(false, "ECON: " + econManager.usePriority() + "/" + econManager.getVolitility());
+	        game.sendTextEx(false, "DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
+	        game.sendTextEx(false, "ATTK: " + rushManager.usePriority() + "/" + rushManager.getVolitility());
+	        game.sendTextEx(false, "DEFN: " + defenseManager.usePriority() + "/" + defenseManager.getVolitility());
 
 	        KaonBot.print("ECON: " + econManager.usePriority() + "/" + econManager.getVolitility());
 	        KaonBot.print("DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
