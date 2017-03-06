@@ -143,19 +143,26 @@ public class DefenseManager extends AbstractManager {
 		}
 	}
 	
+	public boolean needEmergencyDefenders(int extraClaims){
+		return targetList.size() > claimList.size() + extraClaims;
+	}
+	
 	public boolean needEmergencyDefenders(){
-		return targetList.size() > claimList.size();
+		return needEmergencyDefenders(0);
 	}
 	
 	@Override
 	public ArrayList<Double> claimUnits(List<Unit> unitList) {
 		ArrayList<Double> toReturn = new ArrayList<Double>(unitList.size());
 		
+		int workerClaims = 0;
+		
 		for(Unit unit: unitList){
 			UnitType type = unit.getType();
 			if(!type.isWorker() && !type.isBuilding()) {
 				toReturn.add(usePriority());
-			}else if(type.isWorker() && needEmergencyDefenders()) {
+			}else if(type.isWorker() && needEmergencyDefenders(workerClaims)) {
+				workerClaims++;
 				toReturn.add(usePriority());
 			}else {
 				toReturn.add(DO_NOT_WANT);
