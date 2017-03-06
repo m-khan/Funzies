@@ -32,7 +32,7 @@ public class DefenseManager extends AbstractManager {
 	TilePosition raxBase;
 	int frameCount = 0;
 	final int FRAME_LOCK = 51;
-	final int DEFENSE_RADIUS = 100;
+	final int DEFENSE_RADIUS = 400;
 	final double SUPPLY_CAPPED = -1.0;
 	final double NO_TARGET = -0.01;
 	final double YES_TARGET = 0.01;
@@ -51,7 +51,7 @@ public class DefenseManager extends AbstractManager {
 
 	@Override
 	public String getName(){
-		return "DEFENSE " + targetList.size() + "|" + rushers.size() + "|" + targetIndex;
+		return "DEFENSE " + targetList.size() + "|" + rushers.size() + "|" + emergencyDefenderCount;
 	}
 	
 	@Override
@@ -270,6 +270,7 @@ public class DefenseManager extends AbstractManager {
 		}
 		Unit u = KaonBot.getAllUnits().get(index);
 		if(KaonBot.isFriendly(u) && u.getType().isBuilding()){
+			KaonBot.getGame().drawCircleMap(u.getPosition(), DEFENSE_RADIUS, new Color(0, 0, 0));
 			for(Unit e : u.getUnitsInRadius(DEFENSE_RADIUS)){
 				if(KaonBot.isEnemy(e) && !e.isCloaked()){
 					incrementPriority(getVolitility() * NEW_TARGET, false);
