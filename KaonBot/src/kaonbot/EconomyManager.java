@@ -1,9 +1,11 @@
 package kaonbot;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Set;
 
 import bwapi.Color;
 import bwapi.Game;
@@ -18,6 +20,7 @@ import bwta.BaseLocation;
 public class EconomyManager extends AbstractManager{
 	
 	private final double ENEMY_BASE = 1.0;
+	private final double ENEMY_DEFENSE = 1.0;
 	private final double SCV_MULT = 1.0;
 	private final double SCV_SURPLUS = 0.2;
 	private final int SCV_HARDCAP = 80;
@@ -26,6 +29,8 @@ public class EconomyManager extends AbstractManager{
 	private int NUM_BASES_TO_QUEUE = 3;
 	private boolean needNewBase = false;
 	
+	
+	private Set<Unit> allWorkers = new HashSet<Unit>();
 	private ArrayList<Base> bases = new ArrayList<Base>();
 	
 	public EconomyManager(double baselinePriority, double volatilityScore)
@@ -60,6 +65,7 @@ public class EconomyManager extends AbstractManager{
 	@Override
 	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
 		if(friendly && u.getType().isWorker()){
+			allWorkers.remove(u);
 			//incrementPriority(getVolitility(), false);
 		}
 	}
@@ -72,13 +78,11 @@ public class EconomyManager extends AbstractManager{
 		double lowScore = highScore;
 		
 		int totalSCVRequired = 0;
-		int totalSCVs = 0;
 		
 		// normalize and use all expand scores
 		int i = 0;
 		for(Base b: bases){
 			totalSCVRequired += b.requiredMiners();
-			totalSCVs += b.miners.size();
 
 			double score = b.gdFromEnemy - b.gdFromStart;
 			expandScores[i] = score;
@@ -89,15 +93,6 @@ public class EconomyManager extends AbstractManager{
 				lowScore = score;
 			}
 			i++;
-		}
-		
-		boolean capped = false;
-		if(totalSCVRequired > SCV_HARDCAP - totalSCVs){
-			totalSCVRequired = SCV_HARDCAP - totalSCVs;
-			if(totalSCVRequired > 0)
-			{
-				capped = true;
-			}
 		}
 		
 		for(i = 0; i < bases.size(); i++){
@@ -113,11 +108,11 @@ public class EconomyManager extends AbstractManager{
 					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_SATURATED * nScore), null, 
 							UnitType.Terran_Command_Center, b.location.getTilePosition()));
 				}
-			} else if(b.cc.exists()){
+			} else if(b.cc.exists() && allWorkers.size() < SCV_HARDCAP){
 				if(totalSCVRequired > 0){
 					list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
 					totalSCVRequired--;
-				} else if(!capped){
+				} else {
 					list.add(new UnitOrder(50, 0, this.usePriority(SCV_SURPLUS), b.cc, UnitType.Terran_SCV));
 				}
 			}
@@ -136,7 +131,9 @@ public class EconomyManager extends AbstractManager{
 	
 
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy){
-		if(unit.getType().isMineralField()){
+		UnitType type = unit.getType();
+		
+		if(type.isMineralField()){
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
 				if(distance < 300){
@@ -144,7 +141,10 @@ public class EconomyManager extends AbstractManager{
 				}
 			}
 		}
-		else if(unit.getType() == UnitType.Resource_Vespene_Geyser){
+		else if(friendly && type.isWorker()){
+			allWorkers.add(unit);
+		}
+		else if(type == UnitType.Resource_Vespene_Geyser){
 			for(Base b: bases){
 				double distance = b.location.getDistance(unit.getPosition());
 				if(distance < 300){
@@ -152,7 +152,7 @@ public class EconomyManager extends AbstractManager{
 				}
 			}
 		}
-		else if(unit.getType().isResourceDepot()){
+		else if(type.isResourceDepot()){
 			if (friendly && unit.isCompleted()){
 				for(Base b: bases){
 					double distance = b.location.getDistance(unit.getPosition());
@@ -162,8 +162,11 @@ public class EconomyManager extends AbstractManager{
 					}
 				}
 			} else if(enemy){
-				incrementPriority(ENEMY_BASE, false);
+				incrementPriority(getVolitility() * ENEMY_BASE, false);
 			}
+		}
+		else if(enemy && type.isBuilding() && type.canAttack()){
+			incrementPriority(getVolitility() * ENEMY_DEFENSE, false);
 		}
 	}
 	
@@ -187,8 +190,12 @@ public class EconomyManager extends AbstractManager{
 
 	@Override
 	public void runFrame(){
+		List<Unit> toFree = new LinkedList<Unit>();
 		for(Base b: bases){
-			b.update();
+			toFree.addAll(b.update());
+		}
+		for(Unit u: toFree){
+			claimList.get(u.getID()).free();
 		}
 	}
 	
@@ -431,7 +438,11 @@ public class EconomyManager extends AbstractManager{
 				microCount++;
 				return false;
 			}
-
+			
+			if(KaonBot.defenseManager.needEmergencyDefenders()){
+				return true;
+			}
+			
 			if(getUnit().getOrder() == Order.MiningMinerals 
 					|| getUnit().isCarryingMinerals() || getUnit().getOrder() == Order.WaitForMinerals)
 			{

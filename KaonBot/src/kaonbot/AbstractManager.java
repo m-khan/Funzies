@@ -79,6 +79,9 @@ public abstract class AbstractManager implements Manager{
 
 	@Override
 	public double incrementPriority(double priorityChange, boolean log) {
+		if(KaonBot.getSupply() < 16) return priorityScore;
+		
+		KaonBot.print(getName() + " PRIORITY CHANGE:" + priorityChange);
 		priorityScore += priorityChange;
 		if(priorityScore < 0) priorityScore = 0;
 		return priorityScore;

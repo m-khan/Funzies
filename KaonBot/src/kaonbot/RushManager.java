@@ -150,8 +150,9 @@ public class RushManager extends AbstractManager {
 			UnitType type = unit.getType();
 			if(!type.isWorker() && !type.isBuilding()) {
 				toReturn.add(usePriority());
-			}
-			else {
+			} else if(type.isWorker() && KaonBot.getSupply() > 380){
+				toReturn.add(0.0001);
+			} else {
 				toReturn.add(DO_NOT_WANT);
 			}
 		}
@@ -328,7 +329,6 @@ public class RushManager extends AbstractManager {
 			game.drawTextMap(r.getUnit().getPosition(), toDraw);
 			game.drawCircleMap(r.getUnit().getPosition(), r.getUnit().getGroundWeaponCooldown(), new Color(0, 0, 0));
 			if(r.getUnit().isStuck()) game.drawCircleMap(r.getUnit().getPosition(), 2, new Color(255, 0, 0), true);
-
 		}
 	}
 

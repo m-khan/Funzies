@@ -34,7 +34,8 @@ public class DefenseManager extends AbstractManager {
 	final int FRAME_LOCK = 51;
 	final int DEFENSE_RADIUS = 100;
 	final double SUPPLY_CAPPED = -1.0;
-	final double NO_TARGET = -0.001;
+	final double NO_TARGET = -0.01;
+	final double YES_TARGET = 0.01;
 	final double NEW_TARGET = 0.01;
 	final double ENEMY_BASE = -1.0;
 	final double FRIENDLY_BASE = 2.0;
@@ -142,6 +143,10 @@ public class DefenseManager extends AbstractManager {
 		}
 	}
 	
+	public boolean needEmergencyDefenders(){
+		return targetList.size() > claimList.size();
+	}
+	
 	@Override
 	public ArrayList<Double> claimUnits(List<Unit> unitList) {
 		ArrayList<Double> toReturn = new ArrayList<Double>(unitList.size());
@@ -150,8 +155,9 @@ public class DefenseManager extends AbstractManager {
 			UnitType type = unit.getType();
 			if(!type.isWorker() && !type.isBuilding()) {
 				toReturn.add(usePriority());
-			}
-			else {
+			}else if(type.isWorker() && needEmergencyDefenders()) {
+				toReturn.add(usePriority());
+			}else {
 				toReturn.add(DO_NOT_WANT);
 			}
 		}
@@ -245,7 +251,7 @@ public class DefenseManager extends AbstractManager {
 		if(index == 0)
 		{
 			if(newTargetList.size() == 0){
-				incrementPriority(getVolitility() * NO_TARGET * KaonBot.getAllClaims().size(), false);
+				incrementPriority(getVolitility() * NO_TARGET * claimList.size(), false);
 			}
 			
 			targetList.clear();
@@ -265,8 +271,6 @@ public class DefenseManager extends AbstractManager {
 				}
 			}
 		}
-		
-		
 	}
 		
 	@Override

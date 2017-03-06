@@ -17,7 +17,7 @@ public class UnitOrder extends ProductionOrder implements Comparator<ProductionO
 		this.producer = producer;
 		producerPosition = producer.getPosition();
 		this.toProduce = toProduce;
-		
+		this.setSpent();
 	}
 	
 	public String toString(){

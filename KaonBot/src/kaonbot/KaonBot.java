@@ -113,6 +113,12 @@ public class KaonBot extends DefaultBWListener {
     }
 
     @Override
+    public void onEnd(boolean b){
+    	super.onEnd(b);
+    	System.exit(0);
+    }
+    
+    @Override
     public void onStart() {
     	try{
 	        game = mirror.getGame();
@@ -143,7 +149,12 @@ public class KaonBot extends DefaultBWListener {
 	        game.sendText("DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
 	        game.sendText("ATTK: " + rushManager.usePriority() + "/" + rushManager.getVolitility());
 	        game.sendText("DEFN: " + defenseManager.usePriority() + "/" + defenseManager.getVolitility());
-	        
+
+	        KaonBot.print("ECON: " + econManager.usePriority() + "/" + econManager.getVolitility());
+	        KaonBot.print("DEPT: " + depotManager.usePriority() + "/" + depotManager.getVolitility());
+	        KaonBot.print("ATTK: " + rushManager.usePriority() + "/" + rushManager.getVolitility());
+	        KaonBot.print("DEFN: " + defenseManager.usePriority() + "/" + defenseManager.getVolitility());
+
 	        managerList.add(econManager);
 	        managerList.add(depotManager);
 	        managerList.add(rushManager);
