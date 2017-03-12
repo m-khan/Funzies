@@ -3,16 +3,17 @@ import java.text.DecimalFormat;
 import java.util.Comparator;
 
 import bwapi.Position;
+import bwapi.TechType;
 import bwapi.Unit;
-import bwapi.UnitType;
+import bwapi.UpgradeType;
 
-public class UnitOrder extends ProductionOrder implements Comparator<ProductionOrder>{
+public class UpgradeOrder extends ProductionOrder implements Comparator<ProductionOrder>{
 	
 	private Unit producer;
 	private Position producerPosition;
-	private UnitType toProduce;
+	private UpgradeType toProduce;
 	
-	public UnitOrder(int minerals, int gas, double priority, Unit producer, UnitType toProduce){
+	public UpgradeOrder(int minerals, int gas, double priority, Unit producer, UpgradeType toProduce){
 		super(ProductionOrder.UNIT, minerals, gas, priority);
 		this.producer = producer;
 		producerPosition = producer.getPosition();
@@ -29,18 +30,17 @@ public class UnitOrder extends ProductionOrder implements Comparator<ProductionO
 		return producerPosition.toString();
 	}
 	
-	@Override
 	public int getSupply(){
-		return toProduce.supplyRequired();
+		return 0;
 	}
 	
 	public boolean execute(){
 		setDone();
-		return producer.train(toProduce);
+		return producer.upgrade(toProduce);
 	}
 
 	public boolean canExecute(){
-		return  producer.exists() && producer.getRemainingTrainTime() == 0 && producer.getTrainingQueue().size() == 0;
+		return  producer.exists() && producer.getRemainingResearchTime() == 0 && producer.getTrainingQueue().size() == 0;
 	}
 	
 	

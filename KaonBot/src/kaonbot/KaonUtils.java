@@ -13,6 +13,16 @@ import bwapi.UnitType;
 
 public class KaonUtils {
 
+	private static Random r = new Random();
+	
+	public static Position getRandomPositionNear(Position p, int range){
+		if(range == 0) return p;
+		int addX = r.nextInt(range * 2) - range;
+		int addY = r.nextInt(range * 2) - range;
+		
+		return new Position(p.getX() + addX, p.getY() + addY);
+	}
+	
 	public static Unit getClosest(Position pos, List<Unit> units){
 		if(units.size() == 0) return null;
 		

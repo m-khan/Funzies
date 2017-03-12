@@ -10,8 +10,10 @@ import bwapi.DefaultBWListener;
 import bwapi.Game;
 import bwapi.Mirror;
 import bwapi.Player;
+import bwapi.TechType;
 import bwapi.Unit;
 import bwapi.UnitType;
+import bwapi.UpgradeType;
 import bwta.BWTA;
 import bwta.BaseLocation;
 
@@ -58,6 +60,14 @@ public class KaonBot extends DefaultBWListener {
     	return self.supplyUsed(); 
     }
     
+    public static int getMinerals(){
+    	return self.minerals();
+    }
+    
+    public static int getGas(){
+    	return self.gas();
+    }
+    
     public static void showMessage(String message){
     	//game.printf(message);
     }
@@ -68,6 +78,14 @@ public class KaonBot extends DefaultBWListener {
     
     public static boolean isEnemy(Unit u){
     	return self.isEnemy(u.getPlayer());
+    }
+    
+    public static boolean hasResearched(TechType tech){
+    	return self.hasResearched(tech);
+    }
+    
+    public static int getUpgradeLevel(UpgradeType up){
+    	return self.getUpgradeLevel(up);
     }
     
     public static void print(String message, boolean error){
@@ -128,7 +146,7 @@ public class KaonBot extends DefaultBWListener {
 	        pQueue = new ProductionQueue(self);
 	        bpInstance = BuildingPlacer.getInstance();
 	
-	        //game.setLocalSpeed(0);
+	        game.setLocalSpeed(15);
 	        
 	        //Use BWTA to analyze map
 	        //This may take a few minutes if the map is processed first time!
@@ -308,7 +326,7 @@ public class KaonBot extends DefaultBWListener {
         String out = pQueue.processQueue();
         game.drawTextScreen(10, 10, out);
 
-        //displayDebugGraphics();
+        displayDebugGraphics();
         
     }
     

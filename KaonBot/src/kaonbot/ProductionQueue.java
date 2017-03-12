@@ -86,7 +86,7 @@ public class ProductionQueue extends PriorityQueue<ProductionOrder> {
 				}
 			}
 			else if(toExecute.getType() == ProductionOrder.UNIT &&
-					((UnitOrder) toExecute).getSupply() <= freeSupply &&
+					toExecute.getSupply() <= freeSupply &&
 					toExecute.canExecute()){
 				// Unit can be executed
 				KaonBot.print("Producing " + toExecute);

@@ -135,7 +135,7 @@ public class DepotManager extends AbstractManager {
 		}
 		
 		if(depotsToQueue > 0){
-			toReturn.add(new BuildingOrder(100, 0, depotPriority, null, 
+			toReturn.add(new BuildingOrder(100, 0, depotPriority, 
 					UnitType.Terran_Supply_Depot, nextDepot));
 		}
 

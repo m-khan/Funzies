@@ -12,7 +12,6 @@ import bwapi.Unit;
 
 public abstract class AbstractManager implements Manager{
 	private double priorityScore;
-	private double baselinePriority;
 	private double volitilityScore;
 	protected double DO_NOT_WANT = -1;
 	protected LinkedList<Claim> newUnits = new LinkedList<Claim>();
@@ -20,7 +19,6 @@ public abstract class AbstractManager implements Manager{
 	protected Color debugColor;
 	
 	public AbstractManager(double baselinePriority, double volitilityScore) {
-		this.baselinePriority = baselinePriority;
 		priorityScore = baselinePriority;
 		this.volitilityScore = volitilityScore;
 		debugColor = KaonUtils.getRandomColor();
@@ -35,13 +33,13 @@ public abstract class AbstractManager implements Manager{
 	public void assignNewUnit(Claim claim){
 		claimList.put(claim.unit.getID(), claim);
 		newUnits.add(claim);
-		KaonBot.print(getName() + " claiming " + claim.unit.getID() + " " + claim.unit.getType());
+		//KaonBot.print(getName() + " claiming " + claim.unit.getID() + " " + claim.unit.getType());
 		
 		// This makes sure the claim is removed if the unit is commandeered by another manager
 		claim.addOnCommandeer(claim.new CommandeerRunnable(){
 			@Override
 			public void run() {
-				KaonBot.print(getName() + " releasing " + claim.unit.getID() + " " + claim.unit.getType());
+				//KaonBot.print(getName() + " releasing " + claim.unit.getID() + " " + claim.unit.getType());
 				removeClaim(claim);
 				this.disable();
 			}

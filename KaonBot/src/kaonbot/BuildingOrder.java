@@ -13,19 +13,24 @@ import bwapi.UnitType;
 
 public class BuildingOrder extends ProductionOrder implements Comparator<ProductionOrder>{
 	
-	private Unit producer;
+	private Unit producer = null;
 	private Claim tempClaim = null;
 	private UnitType toProduce;
 	private TilePosition position;
 	private BuildManager buildManager = null;
+	private boolean ignoreReservations;
 	
-	public BuildingOrder(int minerals, int gas, double priority, Unit producer, UnitType toProduce, TilePosition position) {
+	public BuildingOrder(int minerals, int gas, double priority, UnitType toProduce, TilePosition position) {
+		this(minerals, gas, priority, toProduce, position, false);
+	}
+
+	public BuildingOrder(int minerals, int gas, double priority, UnitType toProduce, TilePosition position, boolean ignoreReservations) {
 		super(ProductionOrder.BUILDING, minerals, gas, priority);
-		this.producer = producer;
+		this.ignoreReservations = ignoreReservations;
 		this.toProduce = toProduce;
 		this.position = position;
 	}
-	
+
 	public TilePosition getPosition(){
 		return position;
 	}
@@ -100,6 +105,10 @@ public class BuildingOrder extends ProductionOrder implements Comparator<Product
 	}
 	
 	public boolean canExecute(){
+		if(!ignoreReservations && !BuildingPlacer.getInstance().canBuildHere(position, toProduce)){
+			return false;
+		}
+		
 		if(producer == null || !producer.exists()){
 			findNewProducer();
 		}

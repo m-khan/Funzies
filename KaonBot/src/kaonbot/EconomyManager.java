@@ -25,9 +25,11 @@ public class EconomyManager extends AbstractManager{
 	private final double SCV_SURPLUS = 0.2;
 	private final int SCV_HARDCAP = 80;
 	private final double EXPO_MULT = 0.5;
+	//private final double GAS_MULT = 0.8;
 	private final double EXPO_SATURATED = .9;
 	private int NUM_BASES_TO_QUEUE = 3;
 	private boolean needNewBase = false;
+	private double gasPriority = 0;
 	
 	
 	private Set<Unit> allWorkers = new HashSet<Unit>();
@@ -49,6 +51,12 @@ public class EconomyManager extends AbstractManager{
 		
 		for(BaseLocation l: baseLocations){
 			bases.add(new Base(l, start));
+		}
+	}
+	
+	public void setGasPriority(double priority){
+		if(priority > gasPriority){
+			gasPriority = priority;
 		}
 	}
 	
@@ -102,18 +110,24 @@ public class EconomyManager extends AbstractManager{
 			nScore = nScore / (highScore - lowScore);
 			if(b.cc == null) {
 				if(totalSCVRequired > 0){
-					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), null, 
+					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_MULT * nScore), 
 							UnitType.Terran_Command_Center, b.location.getTilePosition()));
 				} else {
-					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_SATURATED * nScore), null, 
+					list.add(new BuildingOrder(400, 0, this.usePriority(EXPO_SATURATED * nScore), 
 							UnitType.Terran_Command_Center, b.location.getTilePosition()));
 				}
-			} else if(b.cc.exists() && allWorkers.size() < SCV_HARDCAP){
-				if(totalSCVRequired > 0){
-					list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
-					totalSCVRequired--;
-				} else {
-					list.add(new UnitOrder(50, 0, this.usePriority(SCV_SURPLUS), b.cc, UnitType.Terran_SCV));
+			} else if(b.cc.exists()){
+				if(b.gas != null && b.extractor == null){
+					list.add(new BuildingOrder(75, 0, gasPriority, UnitType.Terran_Refinery, b.gas.getTilePosition()));
+				}
+				
+				if ( allWorkers.size() < SCV_HARDCAP){
+					if(totalSCVRequired > 0){
+						list.add(new UnitOrder(50, 0, this.usePriority(SCV_MULT), b.cc, UnitType.Terran_SCV));
+						totalSCVRequired--;
+					} else {
+						list.add(new UnitOrder(50, 0, this.usePriority(SCV_SURPLUS), b.cc, UnitType.Terran_SCV));
+					}
 				}
 			}
 		}
@@ -185,6 +199,14 @@ public class EconomyManager extends AbstractManager{
 					//KaonBot.mainPosition = b.location;
 				}
 			}
+		} else if(friendly && unit.getType().isRefinery()){
+			for(Base b: bases){
+				double distance = b.location.getDistance(unit.getPosition());
+				if(distance < 300){
+					b.extractor = unit;
+					//KaonBot.mainPosition = b.location;
+				}
+			}
 		}
 	}
 
@@ -195,7 +217,10 @@ public class EconomyManager extends AbstractManager{
 			toFree.addAll(b.update());
 		}
 		for(Unit u: toFree){
-			claimList.get(u.getID()).free();
+			Claim claim = claimList.get(u.getID());
+			if(claim != null){
+				claim.free();
+			}
 		}
 	}
 	
@@ -219,6 +244,13 @@ public class EconomyManager extends AbstractManager{
 	public void removeMiner(Claim cl){
 		for(Base b: bases){
 			Iterator<Miner> it = b.miners.iterator();
+			while(it.hasNext()){
+				if(it.next().getUnit() == cl.unit){
+					it.remove();
+				}
+			}
+
+			it = b.gasers.iterator();
 			while(it.hasNext()){
 				if(it.next().getUnit() == cl.unit){
 					it.remove();
@@ -298,12 +330,12 @@ public class EconomyManager extends AbstractManager{
 		double gdFromStart;
 		double gdFromEnemy;
 		private ArrayList<Unit> mins = new ArrayList<Unit>();
-		private ArrayList<Integer> minerCounts = new ArrayList<Integer>(); 
 		Unit gas;
 		Unit extractor = null;
 		Unit cc = null;
 		boolean active = false;
 		ArrayList<Miner> miners = new ArrayList<Miner>();
+		ArrayList<Miner> gasers = new ArrayList<Miner>();
 		
 		protected Base(BaseLocation location, BaseLocation start)
 		{
@@ -323,24 +355,33 @@ public class EconomyManager extends AbstractManager{
 		
 		protected void addMinerals(Unit unit){
 			mins.add(unit);
-			minerCounts.add(0);
 		}
 		
 		protected boolean addMiner(Claim unit){
-			if(mins.size() == 0){
+			if(mins.size() == 0 && extractor == null){
 				return false;
 			}
+			if(extractor != null && extractor.exists() && gasers.size() < 3){
+				gasers.add(new Miner(unit, extractor));
+				return true;
+			} else if(mins.size() > 0){
+				miners.add(new Miner(unit, mins.get((miners.size() + 1) % mins.size()))); //TODO implement mineral lock
+				return true;
+			}
 			
-			miners.add(new Miner(unit, mins.get((miners.size() + 1) % mins.size()))); //TODO implement mineral lock
-			return true;
+			return false;
 		}
 
 		protected int requiredMiners(){
 			if(cc == null || !cc.exists()){
 				return 0;
 			}
+			int gas = 0;
+			if(extractor != null && extractor.exists()){
+				gas = 3;
+			}
 			
-			return mins.size() * 2 + mins.size() / 2 - miners.size();
+			return gas + mins.size() * 2 + mins.size() / 2 - miners.size();
 		}
 		
 		protected List<Unit> update(){
@@ -359,10 +400,16 @@ public class EconomyManager extends AbstractManager{
 					}
 				}
 				miners.clear();
+				for(Miner m: gasers){
+					if(m.getUnit().exists()){
+						freeUnits.add(m.getUnit());
+					}
+				}
+				gasers.clear();
 				return freeUnits;
 			}
 			
-			// check all mineral patches
+			// check all mineral patches TODO: check gas
 			LinkedList<Miner> toRemove = new LinkedList<Miner>();
 			Iterator<Unit> it = mins.iterator();
 			while(it.hasNext()){
@@ -393,6 +440,18 @@ public class EconomyManager extends AbstractManager{
 					}
 				}
 			}
+			for(Miner m : gasers){
+				if(m.update()){
+					if(m.getUnit().exists()){
+						freeUnits.add(m.getUnit());
+						toRemove.add(m);
+					}
+					else{
+						toRemove.add(m);
+					}
+				}
+			}
+			
 			
 			if(requiredMiners() < 0){
 				for(int i = miners.size() - requiredMiners(); i < miners.size(); i++)
@@ -406,7 +465,9 @@ public class EconomyManager extends AbstractManager{
 				miners.remove(m);
 			}
 			for(Unit u: freeUnits){
-				getClaim(u.getID()).free();
+				if(getClaim(u.getID()) != null){
+					getClaim(u.getID()).free();
+				}
 			}
 			return freeUnits;
 		}
@@ -443,8 +504,10 @@ public class EconomyManager extends AbstractManager{
 				return true;
 			}
 			
-			if(getUnit().getOrder() == Order.MiningMinerals 
-					|| getUnit().isCarryingMinerals() || getUnit().getOrder() == Order.WaitForMinerals)
+			Order order = getUnit().getOrder();
+			if(order == Order.MiningMinerals || order == Order.HarvestGas || order == Order.MoveToGas
+					|| getUnit().isCarryingMinerals() || getUnit().isCarryingGas()
+					|| order == Order.WaitForMinerals || order == Order.WaitForGas)
 			{
 				touchClaim();
 				microCount++;
@@ -462,9 +525,10 @@ public class EconomyManager extends AbstractManager{
 		super.displayDebugGraphics(game);
 		for(Base b: bases){
 			if(b.cc != null){
-				game.drawTextMap(b.cc.getPosition(), "Patches: " + b.mins.size() + 
-													 "\nWorkers: " + b.miners.size() + 
-													 "\nNeed: " + b.requiredMiners());
+//				game.drawTextMap(b.cc.getPosition(), "Patches: " + b.mins.size() + 
+//													 "\nWorkers: " + b.miners.size() + 
+//													 "\nonGas: " + b.gasers.size() +
+//													 "\nNeed: " + b.requiredMiners());
 				
 				for(Miner m: b.miners){
 					game.drawLineMap(m.resource.getPosition(), m.getUnit().getPosition(), new Color(100, 100, 200));

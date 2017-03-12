@@ -9,7 +9,7 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 	private int gas;
 	private double priority;
 	protected boolean executed = false;
-	public static final int RESERVATION = 0;
+	public static final int NULL_ORDER = 0;
 	public static final int UNIT = 1;
 	public static final int BUILDING = 2;
 	public static final int ADDON = 3;
@@ -44,6 +44,10 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 		return gas;
 	}
 
+	public int getSupply(){
+		return 0;
+	}
+	
 	public double getPriority() {
 		return priority;
 	}
@@ -84,6 +88,23 @@ public abstract class ProductionOrder implements Comparator<ProductionOrder>, Co
 	
 	public int timeUntilExecutable(){
 		return -1;
+	}
+	
+	public static ProductionOrder getNullOrder(){
+		return new ProductionOrder(0, 0, 0, 0){
+
+			@Override
+			public String toString(){
+				return "NULL_ORDER";
+			}
+			
+			@Override
+			public boolean execute() {
+				// TODO Auto-generated method stub
+				return false;
+			}
+			
+		};
 	}
 }
 

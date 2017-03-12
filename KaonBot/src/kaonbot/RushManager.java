@@ -11,9 +11,11 @@ import bwapi.Color;
 import bwapi.Game;
 import bwapi.Order;
 import bwapi.Position;
+import bwapi.TechType;
 import bwapi.TilePosition;
 import bwapi.Unit;
 import bwapi.UnitType;
+import bwapi.UpgradeType;
 import bwta.BWTA;
 import bwta.BaseLocation;
 
@@ -21,25 +23,37 @@ import bwta.BaseLocation;
 public class RushManager extends AbstractManager {
 
 	List<Unit> raxList = new ArrayList<Unit>();
+	Unit academy = null;
 	LinkedList<Unit> targetList = new LinkedList<Unit>();
 	LinkedList<Position> targetPositions = new LinkedList<Position>();
 	List<Rusher> rushers = new ArrayList<Rusher>();
 	private final double RAX_WEIGHT = 0.6;
-	//private final double MARINE_PER_MEDIC = 5;
+	private final int MARINE_PER_MEDIC = 5;
+	private int medicCounter = 0;
+	private int medicTotal = 0;
+	private final int MEDIC_CAP = 20;
 	private final double NEW_ARMY_UNIT = 0.1;
 	final double BUILDING_KILL_MULTIPLIER = 5.0;
 	final double SUPPLY_CAPPED = 2.0;
 	TilePosition nextRax = null;
 	TilePosition raxBase;
 	private Position lastRusherDeath = null;
+	private Position regroupPoint = null;
+	private Position healSpot = null;
+	private int healSpotTick = 0;
+	private final int HEAL_SPOT_LIFETIME = 100;
 	private boolean waitingForRushers = false;
 	private int waitForNRushers = 1;
-	private int waitTimeout = 1000;
+	private int NRushersSoftCap = 80;
+	private int rushWaitTimeout = 1000;
+	private int rushWaitCounter = 0;
 	private int deadRushers = 0;
 	private int targetIndex = 0;
 	private Set<Unit> rushersWaiting = new HashSet<Unit>();
 	int frameCount = 0;
 	private boolean justStartLocations = true;
+	private boolean canStim = false;
+	
 	final int FRAME_LOCK = 51;
 	private Random r = new Random();
 	
@@ -63,16 +77,26 @@ public class RushManager extends AbstractManager {
 
 	@Override
 	public void handleNewUnit(Unit unit, boolean friendly, boolean enemy) {
+		UnitType type = unit.getType();
 		if(enemy){
-			if(unit.getType().isBuilding()){
+			if(type.isBuilding()){
 				targetList.add(unit);
 				targetPositions.add(unit.getPosition());
-				KaonBot.print(unit.getType() + " added to target list");
+				KaonBot.print(type + " added to target list");
 				incrementPriority(getVolitility(), false);
 			}
-		}
-		if(friendly && !unit.getType().isWorker() && !unit.getType().isBuilding()){
+		}else if(friendly && !type.isWorker() && !unit.getType().isBuilding()){
 			incrementPriority(getVolitility() * NEW_ARMY_UNIT, false);
+			if(type == UnitType.Terran_Marine){
+				medicCounter++;
+			} else if(type == UnitType.Terran_Medic){
+				medicCounter = 0;
+				medicTotal++;
+			}
+			
+		}
+		else if(friendly && type == UnitType.Terran_Academy){
+			KaonBot.econManager.setGasPriority(usePriority());
 		}
 	}
 
@@ -112,17 +136,24 @@ public class RushManager extends AbstractManager {
 	
 	@Override
 	public void handleCompletedBuilding(Unit unit, boolean friendly) {
-		if(friendly && unit.getType() == UnitType.Terran_Barracks){
-			raxList.add(unit);
+		UnitType type = unit.getType();
+		if(friendly){
+			if (unit.getType() == UnitType.Terran_Barracks){
+				raxList.add(unit);
+			} else if(type == UnitType.Terran_Academy){
+				academy = unit;
+				KaonBot.econManager.setGasPriority(usePriority());
+			}
 		}
 	}
 
 	@Override
 	public void handleUnitDestroy(Unit u, boolean friendly, boolean enemy) {
-		double price = u.getType().mineralPrice() + u.getType().gasPrice();
+		UnitType type = u.getType();
+		double price = type.mineralPrice() + type.gasPrice();
 		
 		if(enemy){
-			if(u.getType().isBuilding()){
+			if(type.isBuilding()){
 				price = price * BUILDING_KILL_MULTIPLIER;
 				//waitForNRushers = waitForNRushers / 2;
 				deadRushers = 0;
@@ -136,8 +167,10 @@ public class RushManager extends AbstractManager {
 				if(!waitingForRushers) deadRushers++;
 			}
 			
-			if(u.getType() == UnitType.Terran_Barracks){
+			if(type == UnitType.Terran_Barracks){
 				raxList.remove(u);
+			} else if(type == UnitType.Terran_Medic){
+				medicTotal--;
 			}
 		}
 	}
@@ -174,36 +207,48 @@ public class RushManager extends AbstractManager {
 			frameCount++;
 			return;
 		}
+
+		if(KaonBot.hasResearched(TechType.Stim_Packs)){
+			canStim = true;
+		}
+
+		if(KaonBot.getSupply() > 380){
+			incrementPriority(getVolitility() * SUPPLY_CAPPED, false);
+		}
 		
+		checkRushStrategy();
+		updateNextRax();
+		frameCount = 0;
+	}
+
+	private void checkRushStrategy(){
 		if(targetList.size() == 0){
 			waitForNRushers = 0;
-		} else if(waitingForRushers && KaonBot.getGame().getFrameCount() % waitTimeout == 0){
-			waitForNRushers = waitForNRushers / 2;
+		} else if(waitingForRushers && rushWaitCounter++ > rushWaitTimeout){
+			waitForNRushers = (int) (waitForNRushers / 1.1);
 		}
 		
 		if(waitingForRushers){
 			if(rushersWaiting.size() > waitForNRushers){
 				waitingForRushers = false;
 				rushersWaiting.clear();
-			} else if(claimList.size() / 2 < waitForNRushers){
-				waitForNRushers = claimList.size() / 2;
+				for(Rusher r: rushers){
+					r.forceAttack();
+				}
+				
+			} else if(rushers.size() / 1.5 < waitForNRushers && NRushersSoftCap < waitForNRushers){
+				waitForNRushers = (int) Math.floor(rushers.size() / 1.5);
 			}
 		} else if(deadRushers > waitForNRushers){
 			// Attack deemed failure
 			waitingForRushers = true;
-			waitForNRushers = claimList.size() / 2;
+			waitForNRushers += rushers.size() / 2;
 			deadRushers = 0;
 			targetIndex = r.nextInt(1000000);
 		}
-
-		if(KaonBot.getSupply() > 380){
-			incrementPriority(getVolitility() * SUPPLY_CAPPED, false);
-		}
-
-		updateNextRax();
-		frameCount = 0;
+		
 	}
-
+	
 	private void updateNextRax(){
 		Unit builder = BuildingPlacer.getInstance().getSuitableBuilder(KaonBot.getStartPosition().getTilePosition(), 
 				getRaxPriority(), this);
@@ -229,12 +274,26 @@ public class RushManager extends AbstractManager {
 	public List<ProductionOrder> getProductionRequests() {
 		List<ProductionOrder> prodList = new LinkedList<ProductionOrder>();
 		
-		for(Unit rax: raxList){
-			if(rax.getAddon() != null){
-				prodList.add(new UnitOrder(50, 50, this.usePriority(), rax, UnitType.Terran_Medic));
+		int mCounter = medicCounter;
+		if(academy != null){
+			if(!academy.exists()){
+				academy = null;
+			} else if(!canStim && KaonBot.getGas() > 100){
+				prodList.add(new ResearchOrder(100, 100, this.usePriority() + 0.001, academy, TechType.Stim_Packs));
+			} else if(academy.canUpgrade(UpgradeType.U_238_Shells)){
+				prodList.add(new UpgradeOrder(150, 100, this.usePriority() + 0.001, academy, UpgradeType.U_238_Shells));
 			}
-			else{
+		}
+		
+		for(Unit rax: raxList){
+			if(academy != null && mCounter > MARINE_PER_MEDIC && KaonBot.getGas() >= 50 && medicTotal < MEDIC_CAP){
+				prodList.add(new UnitOrder(50, 50, this.usePriority(), rax, UnitType.Terran_Medic));
+				mCounter = 0;
+			} else if(academy != null && mCounter > MARINE_PER_MEDIC){
+				KaonBot.econManager.setGasPriority(usePriority());
+			} else{
 				prodList.add(new UnitOrder(50, 0, this.usePriority(), rax, UnitType.Terran_Marine));
+				mCounter++;
 			}
 		}
 
@@ -243,9 +302,20 @@ public class RushManager extends AbstractManager {
 			return prodList;
 		}
 
-		double raxPriority = getRaxPriority();
-		prodList.add(new BuildingOrder(150, 0, raxPriority, null, UnitType.Terran_Barracks, nextRax));
-		
+		if(academy == null && raxList.size() >= MARINE_PER_MEDIC / 2){
+			boolean queueAcademy = true;
+			for(BuildingOrder o: ProductionQueue.getActiveOrders()){
+				if(o.getUnitType() == UnitType.Terran_Academy){
+					queueAcademy = false;
+				}
+			}
+			if(queueAcademy){
+				prodList.add(new BuildingOrder(150, 0, this.usePriority(), UnitType.Terran_Academy, nextRax));
+			}
+		} else {
+			double raxPriority = getRaxPriority();
+			prodList.add(new BuildingOrder(150, 0, raxPriority, UnitType.Terran_Barracks, nextRax));
+		}
 		return prodList;
 	}
 
@@ -264,7 +334,6 @@ public class RushManager extends AbstractManager {
 				pIt.remove();
 				KaonBot.print(u.getType() + " removed from target list");
 				incrementPriority(-1 * getVolitility(), false);
-
 			}
 		}
 	}
@@ -277,6 +346,10 @@ public class RushManager extends AbstractManager {
 			justStartLocations = false;
 		}
 		
+		if(healSpot != null && KaonBot.getGame().getFrameCount() - HEAL_SPOT_LIFETIME > healSpotTick){
+			healSpot = null;
+		}
+		
 		for(Claim c: newUnits){
 			if(targetList.size() == 0){
 				
@@ -287,10 +360,14 @@ public class RushManager extends AbstractManager {
 					starts = BWTA.getBaseLocations();
 				}
 				Position p = starts.get(r.nextInt(starts.size())).getPosition();
-				rushers.add(new Rusher(c, null, p));
+				rushers.add(new Rusher(c, null, KaonUtils.getRandomPositionNear(p, 100)));
 			}
 			else{
-				rushers.add(new Rusher(c, targetList.get(targetIndex % targetList.size()), targetPositions.get(targetIndex % targetList.size())));
+				if(c.unit.getType() == UnitType.Terran_Medic && healSpot != null){
+					rushers.add(new Rusher(c, null, healSpot));
+				} else {
+					rushers.add(new Rusher(c, targetList.get(targetIndex % targetList.size()), targetPositions.get(targetIndex % targetList.size())));
+				}
 			}
 		}
 		newUnits.clear();
@@ -314,7 +391,13 @@ public class RushManager extends AbstractManager {
 		}
 		
 		for(Rusher r: rushers){
-			String toDraw = toString() + "\n" + r.getUnit().getOrder();
+//			String toDraw = /*toString() + "\n" +*/ r.getUnit().getOrder().toString();
+//			if(r.getUnit().getTarget() != null){
+//				toDraw += "\ngetTarget(): " + r.getUnit().getTarget().getType();
+//			}
+//			if(r.getUnit().getOrderTarget() != null){
+//				toDraw += "\ngetOrderTarget(): " + r.getUnit().getOrderTarget().getType();
+//			}
 //			if(r.getUnit().isStartingAttack()){
 //				toDraw += "\nisStartingAttack";
 //			}
@@ -326,18 +409,17 @@ public class RushManager extends AbstractManager {
 //			{
 //				toDraw += "\nisAttacking";
 //			}
-			game.drawTextMap(r.getUnit().getPosition(), toDraw);
+			//game.drawTextMap(r.getUnit().getPosition(), toDraw + "\n" + r.getUnit().getGroundWeaponCooldown());
 			game.drawCircleMap(r.getUnit().getPosition(), r.getUnit().getGroundWeaponCooldown(), new Color(0, 0, 0));
 			if(r.getUnit().isStuck()) game.drawCircleMap(r.getUnit().getPosition(), 2, new Color(255, 0, 0), true);
 		}
 	}
 
-	
 	class Rusher extends Behavior{
 		
 		Unit target;
 		Position targetPosition;
-		private final int MICRO_LOCK = 12;
+		private final int MICRO_LOCK = 8;
 		private int microCount;
 		
 		public Rusher(Claim c, Unit target, Position targetPosition) {
@@ -354,7 +436,7 @@ public class RushManager extends AbstractManager {
 		
 		@Override
 		public boolean update() {
-			//KaonBot.getGame().drawLineMap(getUnit().getPosition(), targetPosition, new Color(255, 0, 0));
+			KaonBot.getGame().drawLineMap(getUnit().getPosition(), targetPosition, new Color(255, 0, 0));
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;
@@ -376,10 +458,25 @@ public class RushManager extends AbstractManager {
 			
 			// if it's fighting we just let it do it's thing
 			if(	getUnit().getOrder() == Order.AttackUnit) {
-				if(getUnit().getTarget() != null && getUnit().getTarget().getType().isBuilding()){
+				if(getUnit().getOrderTarget() != null && getUnit().getOrderTarget().getType().isBuilding()){
+					addTarget(getUnit().getTarget(), true);
+				} else if(getUnit().getTarget() != null && getUnit().getTarget().getType().isBuilding()){
 					addTarget(getUnit().getTarget(), true);
 				}
+				if(canStim && !getUnit().isStimmed()){
+					getUnit().useTech(TechType.Stim_Packs);
+				}
+				
+				healSpot = getUnit().getPosition();
+				healSpotTick = KaonBot.getGame().getFrameCount();
 				touchClaim();
+				microCount = 0;
+				return false;
+			}
+			
+			if( getUnit().isLoaded()){
+				touchClaim();
+				KaonBot.defenseManager.unloadAll();
 				microCount = 0;
 				return false;
 			}
@@ -394,7 +491,7 @@ public class RushManager extends AbstractManager {
 //				}
 			}else if((getUnit().getDistance(targetPosition) < getUnit().getType().sightRange()))
 			{
-				KaonBot.print(getUnit().getID() + " NOTHING HERE: " + target + ", " + targetPosition);
+				//KaonBot.print(getUnit().getID() + " NOTHING HERE: " + target + ", " + targetPosition);
 				if(target != null){
 					removeTarget(target);
 				}
@@ -404,8 +501,9 @@ public class RushManager extends AbstractManager {
 			if(lastRusherDeath != null && waitingForRushers){
 				if(getUnit().getDistance(lastRusherDeath) < getUnit().getType().sightRange() * 3){
 					if(rushersWaiting.add(getUnit())){
-						getUnit().stop();
+						regroupPoint = getUnit().getPosition();
 					}
+					getUnit().attack(KaonUtils.getRandomPositionNear(regroupPoint, waitForNRushers));
 					touchClaim();
 					microCount = 0;
 					return false;
@@ -417,6 +515,9 @@ public class RushManager extends AbstractManager {
 			}
 			
 			if( getUnit().getOrder() == Order.AttackMove){
+				if(r.nextInt(1000) == 0){ // attempt to clear blockages (slowly but shouldn't interfere too much with other stuff)
+					getUnit().attack(targetPosition);
+				}
 				microCount = 0;
 				return false;
 			}
