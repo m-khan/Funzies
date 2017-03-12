@@ -54,7 +54,7 @@ public class RushManager extends AbstractManager {
 	private boolean justStartLocations = true;
 	private boolean canStim = false;
 	
-	final int FRAME_LOCK = 51;
+	final int FRAME_LOCK = 52;
 	private Random r = new Random();
 	
 	public RushManager(double baselinePriority, double volitilityScore) {
@@ -443,6 +443,7 @@ public class RushManager extends AbstractManager {
 			}
 			
 			if(!claimList.containsKey(getUnit().getID())){
+				getUnit().stop();
 				return true;
 			}
 			

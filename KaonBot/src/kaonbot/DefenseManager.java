@@ -370,6 +370,7 @@ public class DefenseManager extends AbstractManager {
 		//TODO: actually prioritize targets
 		targetIndex = r.nextInt(100000);
 		
+		updateTargetList();
 		updateNextRax();
 		frameCount = 0;
 	}
@@ -488,7 +489,6 @@ public class DefenseManager extends AbstractManager {
 	@Override
 	public void assignNewUnitBehaviors() {
 		updateDefensePoints();
-		updateTargetList();
 		
 		for(Claim c: newUnits){
 			if(c.unit.getType().isWorker()){
@@ -593,6 +593,7 @@ public class DefenseManager extends AbstractManager {
 			}
 			
 			if(!claimList.containsKey(getUnit().getID())){
+				getUnit().stop();
 				return true;
 			}
 
