@@ -277,7 +277,7 @@ public class DefenseManager extends AbstractManager {
 		if(enemy){
 			incrementPriority(getVolitility() * price / -100, false);
 		} else if(friendly){
-			if(!claimList.containsKey(u.getID())){
+			if(!claimList.containsKey(u.getID()) || u.getType().isWorker()){
 				incrementPriority(getVolitility() * price / 100, false);
 			}
 			if(u.getType().isBuilding()){
