@@ -239,7 +239,7 @@ public class RushManager extends AbstractManager {
 			} else if(rushers.size() / 1.5 < waitForNRushers && NRushersSoftCap < waitForNRushers){
 				waitForNRushers = (int) Math.floor(rushers.size() / 1.5);
 			}
-		} else if(deadRushers > waitForNRushers){
+		} else if(deadRushers > waitForNRushers && targetList.size() > 0){
 			// Attack deemed failure
 			waitingForRushers = true;
 			waitForNRushers += rushers.size() / 2;
