@@ -42,7 +42,7 @@ public class DefenseManager extends AbstractManager {
 	final double YES_TARGET = 0.01;
 	final double NEW_TARGET = 0.01;
 	final double ENEMY_BASE = -1.0;
-	final double FRIENDLY_BASE = 2.0;
+	final double FRIENDLY_BASE = 1.0;
 	final int BUNKER_RATING = 10;
 	final int BUNKER_MAX = 3;
 	final int DEFENSE_POINT_RANGE = 500;
@@ -51,6 +51,7 @@ public class DefenseManager extends AbstractManager {
 	private int targetListUpdateFrame = 0;
 	private int targetIndex;
 	private int emergencyDefenderCount = 0;
+	private List<Unit> newExpansions = new ArrayList<Unit>();
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
 		super(baselinePriority, volitilityScore);
@@ -83,7 +84,8 @@ public class DefenseManager extends AbstractManager {
 			}
 		}
 		else if(friendly){
-			if(unit.getType().isResourceDepot()){
+			if(unit.getType().isResourceDepot() && !unit.isCompleted()){
+				newExpansions.add(unit);
 				updateDefensePoints();
 				incrementPriority(getVolitility() * FRIENDLY_BASE, false);
 			}
@@ -91,42 +93,49 @@ public class DefenseManager extends AbstractManager {
 	}
 	private void updateDefensePoints(){
 		defensePoints.clear();
-
-		List<BaseLocation> bases = KaonBot.econManager.getBases();
-		for(BaseLocation b: bases){
-			defensePoints.add(b.getPosition());
-		}
-
-		if(defensePoints.size() == 0){
-			defensePoints.add(KaonBot.mainPosition.getPosition());
-		}
-
-		if(KaonBot.getSupply() > 40){
-			Set<Chokepoint> chokes = new HashSet<Chokepoint>();		
-			List<Chokepoint> duplicates = new ArrayList<Chokepoint>();
-			Set<BaseLocation> toAdd = new HashSet<BaseLocation>();
-			
+		
+		if(newExpansions.size() > 0){
+			for(Unit u: newExpansions){
+				defensePoints.add(u.getPosition());
+			}
+			return;
+		} else {
+	
+			List<BaseLocation> bases = KaonBot.econManager.getBases();
 			for(BaseLocation b: bases){
-				List<Chokepoint> newChokes = b.getRegion().getChokepoints();
-				for(Chokepoint choke : newChokes){
-					if(choke.getCenter().getDistance(b.getPosition()) > DEFENSE_POINT_RANGE){
-						toAdd.add(b);
-					} else if(!chokes.add(choke)){
-						duplicates.add(choke);
-					}
-				}
-			}
-			for(Chokepoint choke : duplicates){
-				chokes.remove(choke);
-			}
-			for(Chokepoint choke : chokes){
-				defensePoints.add(choke.getCenter());
-			}
-			for(BaseLocation b: toAdd){
 				defensePoints.add(b.getPosition());
 			}
+	
+			if(defensePoints.size() == 0){
+				defensePoints.add(KaonBot.mainPosition.getPosition());
+			}
+	
+			if(KaonBot.getSupply() > 40){
+				Set<Chokepoint> chokes = new HashSet<Chokepoint>();		
+				List<Chokepoint> duplicates = new ArrayList<Chokepoint>();
+				Set<BaseLocation> toAdd = new HashSet<BaseLocation>();
+				
+				for(BaseLocation b: bases){
+					List<Chokepoint> newChokes = b.getRegion().getChokepoints();
+					for(Chokepoint choke : newChokes){
+						if(choke.getCenter().getDistance(b.getPosition()) > DEFENSE_POINT_RANGE){
+							toAdd.add(b);
+						} else if(!chokes.add(choke)){
+							duplicates.add(choke);
+						}
+					}
+				}
+				for(Chokepoint choke : duplicates){
+					chokes.remove(choke);
+				}
+				for(Chokepoint choke : chokes){
+					defensePoints.add(choke.getCenter());
+				}
+				for(BaseLocation b: toAdd){
+					defensePoints.add(b.getPosition());
+				}
+			}
 		}
-
 		//TODO fix bunkers
 //		for(Position p: defensePoints){
 //			if(getFortNear(p) == null){
@@ -266,6 +275,7 @@ public class DefenseManager extends AbstractManager {
 				if(fort.addBunker(unit)) return;
 			}
 		} else if(friendly && unit.getType().isResourceDepot()){
+			newExpansions.remove(unit);
 			incrementPriority(getVolitility(), false);
 		}
 	}
@@ -284,6 +294,9 @@ public class DefenseManager extends AbstractManager {
 				Fort f = getFortNear(u.getPosition());
 				if(f != null){
 					f.priority *= FORT_PRIORITY_INCREASE;
+				}
+				if(u.getType().isResourceDepot()){
+					newExpansions.remove(u);
 				}
 			}
 			if(u.getType() == UnitType.Terran_Barracks){
@@ -363,9 +376,9 @@ public class DefenseManager extends AbstractManager {
 			incrementPriority(getVolitility() * SUPPLY_CAPPED, false);
 		}
 
-//		if(targetList.size() == 0){
-//			incrementPriority(getVolitility() * NO_TARGET, false);
-//		}
+		if(targetList.size() == 0){
+			incrementPriority(getVolitility() * NO_TARGET, false);
+		}
 		
 		//TODO: actually prioritize targets
 		targetIndex = r.nextInt(100000);
@@ -546,6 +559,10 @@ public class DefenseManager extends AbstractManager {
 	public void displayDebugGraphics(Game game){
 		if(nextRax != null){
 			game.drawCircleMap(nextRax.toPosition(), frameCount, debugColor);
+		}
+		
+		for(Position p: defensePoints){
+			KaonBot.getGame().drawCircleMap(p, 150, new Color(0, 0, 255), false);
 		}
 		
 		for(Defender r: rushers){

@@ -410,6 +410,7 @@ public class RushManager extends AbstractManager {
 //				toDraw += "\nisAttacking";
 //			}
 			//game.drawTextMap(r.getUnit().getPosition(), toDraw + "\n" + r.getUnit().getGroundWeaponCooldown());
+			KaonBot.getGame().drawLineMap(r.getUnit().getPosition(), r.targetPosition, new Color(255, 0, 0));
 			game.drawCircleMap(r.getUnit().getPosition(), r.getUnit().getGroundWeaponCooldown(), new Color(0, 0, 0));
 			if(r.getUnit().isStuck()) game.drawCircleMap(r.getUnit().getPosition(), 2, new Color(255, 0, 0), true);
 		}
@@ -436,7 +437,6 @@ public class RushManager extends AbstractManager {
 		
 		@Override
 		public boolean update() {
-			KaonBot.getGame().drawLineMap(getUnit().getPosition(), targetPosition, new Color(255, 0, 0));
 			if(microCount < MICRO_LOCK){
 				microCount++;
 				return false;
