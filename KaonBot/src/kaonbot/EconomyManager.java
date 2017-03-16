@@ -23,7 +23,7 @@ public class EconomyManager extends AbstractManager{
 	private final double ENEMY_DEFENSE = 1.0;
 	private final double SCV_MULT = 1.0;
 	private final double SCV_SURPLUS = 0.2;
-	private final int SCV_HARDCAP = 80;
+	private final int SCV_HARDCAP = 90;
 	private final double EXPO_MULT = 0.5;
 	//private final double GAS_MULT = 0.8;
 	private final double EXPO_SATURATED = .9;

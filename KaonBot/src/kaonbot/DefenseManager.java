@@ -377,7 +377,7 @@ public class DefenseManager extends AbstractManager {
 		}
 
 		if(targetList.size() == 0){
-			incrementPriority(getVolitility() * NO_TARGET, false);
+			incrementPriority(getVolitility() * NO_TARGET * rushers.size(), false);
 		}
 		
 		//TODO: actually prioritize targets
