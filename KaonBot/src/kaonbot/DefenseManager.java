@@ -51,6 +51,7 @@ public class DefenseManager extends AbstractManager {
 	private int targetListUpdateFrame = 0;
 	private int targetIndex;
 	private int emergencyDefenderCount = 0;
+	final int EMERGENCY_DEFENDER_MAX_SUPPLY = 20;
 	private List<Unit> newExpansions = new ArrayList<Unit>();
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
@@ -325,7 +326,8 @@ public class DefenseManager extends AbstractManager {
 	}
 	
 	public boolean needEmergencyDefenders(int extraClaims){
-		return targetList.size() > getAllBunkers().size() * BUNKER_RATING + claimList.size() + extraClaims - emergencyDefenderCount / 2;
+		return KaonBot.getSupply() < EMERGENCY_DEFENDER_MAX_SUPPLY && 
+				targetList.size() > getAllBunkers().size() * BUNKER_RATING + claimList.size() + extraClaims - emergencyDefenderCount / 2;
 	}
 	
 	public boolean needEmergencyDefenders(){
