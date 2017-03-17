@@ -26,7 +26,11 @@ public class KaonBot extends DefaultBWListener {
     
     private static Game game;
 
+    // Cache values that don't change during frame
     private static List<Unit> allUnits;
+    private static int supply = 0;
+    private static int minerals = 0;
+    private static int gas = 0;
     
     private static Player self;
     
@@ -57,15 +61,15 @@ public class KaonBot extends DefaultBWListener {
     }
     
     public static int getSupply(){
-    	return self.supplyUsed(); 
+    	return supply; 
     }
     
     public static int getMinerals(){
-    	return self.minerals();
+    	return minerals;
     }
     
     public static int getGas(){
-    	return self.gas();
+    	return gas;
     }
     
     public static void showMessage(String message){
@@ -276,6 +280,9 @@ public class KaonBot extends DefaultBWListener {
     	try{
     		//showMessage("onFrame()");
     		allUnits = game.getAllUnits();
+    		supply = self.supplyUsed();
+    		minerals = self.minerals();
+    		gas = self.gas();
     		
     		runFrame();
     	} catch(Exception e){
@@ -290,6 +297,8 @@ public class KaonBot extends DefaultBWListener {
         //game.setTextSize(10);
 
 //    	KaonBot.print("FRAME: " + game.getFrameCount());
+    	
+    	ggCheck();
     	
     	StringBuilder output = new StringBuilder("===MANAGERS===\n");
     	for (Manager manager : managerList){
@@ -327,6 +336,13 @@ public class KaonBot extends DefaultBWListener {
         game.drawTextScreen(10, 10, out);
 
         //displayDebugGraphics();
+    }
+    
+    public void ggCheck(){
+    	if(supply == 0 && getMinerals() == 0){
+    		game.sendText("gg");
+    		game.leaveGame();
+    	}
     }
     
     public void handleUnclaimedUnits(StringBuilder output){

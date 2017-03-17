@@ -1,11 +1,9 @@
 package kaonbot;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -51,7 +49,7 @@ public class DefenseManager extends AbstractManager {
 	private int targetListUpdateFrame = 0;
 	private int targetIndex;
 	private int emergencyDefenderCount = 0;
-	final int EMERGENCY_DEFENDER_MAX_SUPPLY = 20;
+	final int EMERGENCY_DEFENDER_MAX_SUPPLY = 50;
 	private List<Unit> newExpansions = new ArrayList<Unit>();
 	
 	public DefenseManager(double baselinePriority, double volitilityScore) {
